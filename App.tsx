@@ -137,32 +137,39 @@ const App: React.FC = () => {
 
         setExplanation(`Preparing your full lesson... (0/${whiteboardSteps.length})`);
 
-        // Generate audio for all steps in parallel
-        const audioPromises = whiteboardSteps.map(async (step, index) => {
+        // Generate audio SEQUENTIALLY with delays to respect rate limits
+        // Free tier allows 3 requests per minute, so we wait 21 seconds between requests
+        const results: (AudioBuffer | null)[] = [];
+        const DELAY_BETWEEN_REQUESTS = 21000; // 21 seconds to be safe with 3/minute limit
+
+        for (let index = 0; index < whiteboardSteps.length; index++) {
+            const step = whiteboardSteps[index];
+
             try {
+                // Add delay before each request (except the first one)
+                if (index > 0 && index % 3 === 0) {
+                    setExplanation(`Preparing your full lesson... (${index}/${whiteboardSteps.length}) - Waiting for rate limit...`);
+                    await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_REQUESTS));
+                }
+
+                setExplanation(`Preparing your full lesson... (${index}/${whiteboardSteps.length})`);
+
                 const base64Audio = await generateSpeech(step.explanation);
                 if (base64Audio) {
-                    return await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
+                    const audioBuffer = await decodeAudioData(decode(base64Audio), audioCtx, 24000, 1);
+                    results.push(audioBuffer);
+                } else {
+                    results.push(null);
                 }
             } catch (e) {
                 console.error(`Failed to generate audio for step ${index}:`, e);
+                results.push(null);
             }
-            return null;
-        });
-        
-        // Use a callback to update progress as promises resolve
-        const results: (AudioBuffer | null)[] = [];
-        let completed = 0;
-        audioPromises.forEach(async (p, i) => {
-            const result = await p;
-            results[i] = result;
-            completed++;
-            setExplanation(`Preparing your full lesson... (${completed}/${whiteboardSteps.length})`);
-            if (completed === whiteboardSteps.length) {
-                setGeneratedAudio(results);
-                setStatus('DRAWING'); // All audio is ready, start the presentation
-            }
-        });
+        }
+
+        setExplanation(`Preparing your full lesson... (${whiteboardSteps.length}/${whiteboardSteps.length}) - Ready!`);
+        setGeneratedAudio(results);
+        setStatus('DRAWING'); // All audio is ready, start the presentation
     };
 
     prepareAudio();

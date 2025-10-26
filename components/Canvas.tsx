@@ -16,6 +16,11 @@ const MAX_ZOOM = 5;
 
 // Draws an arrow with animated progress
 const drawAnimatedArrow = (ctx: CanvasRenderingContext2D, annotation: ArrowAnnotation, origin: {x: number, y: number}, progress: number) => {
+    // Safety checks for missing data
+    if (!annotation || !annotation.start || !annotation.end || !origin) return;
+    if (typeof annotation.start.x !== 'number' || typeof annotation.start.y !== 'number') return;
+    if (typeof annotation.end.x !== 'number' || typeof annotation.end.y !== 'number') return;
+
     const fromX = origin.x + annotation.start.x;
     const fromY = origin.y + annotation.start.y;
     const toX = origin.x + annotation.end.x;
@@ -43,6 +48,11 @@ const drawAnimatedArrow = (ctx: CanvasRenderingContext2D, annotation: ArrowAnnot
 
 // NEW: Draws text with an animated "typing" effect
 const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotation, origin: {x: number, y: number}, progress: number) => {
+    // Safety checks for missing data
+    if (!annotation || !annotation.point || !origin || !annotation.text) return;
+    if (typeof annotation.point.x !== 'number' || typeof annotation.point.y !== 'number') return;
+    if (typeof annotation.fontSize !== 'number') return;
+
     const x = origin.x + annotation.point.x;
     const y = origin.y + annotation.point.y;
     const charsToShow = Math.floor(annotation.text.length * progress);
@@ -57,6 +67,11 @@ const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotat
 
 // Drawing functions for primitive shapes
 const drawAnimatedRectangle = (ctx: CanvasRenderingContext2D, command: Extract<DrawingCommand, {type: 'rectangle'}>, origin: {x: number, y: number}, progress: number) => {
+    // Safety checks for missing data
+    if (!command || !command.center || !origin) return;
+    if (typeof command.center.x !== 'number' || typeof command.center.y !== 'number') return;
+    if (typeof command.width !== 'number' || typeof command.height !== 'number') return;
+
     const w = command.width * progress;
     const h = command.height * progress;
     const x = origin.x + command.center.x - w / 2;
@@ -65,31 +80,46 @@ const drawAnimatedRectangle = (ctx: CanvasRenderingContext2D, command: Extract<D
 }
 
 const drawAnimatedCircle = (ctx: CanvasRenderingContext2D, command: Extract<DrawingCommand, {type: 'circle'}>, origin: {x: number, y: number}, progress: number) => {
+    // Safety checks for missing data
+    if (!command || !command.center || !origin) return;
+    if (typeof command.center.x !== 'number' || typeof command.center.y !== 'number') return;
+    if (typeof command.radius !== 'number') return;
+
     ctx.beginPath();
     ctx.arc(origin.x + command.center.x, origin.y + command.center.y, command.radius * progress, 0, 2 * Math.PI);
     ctx.stroke();
 }
 
 const drawAnimatedPath = (ctx: CanvasRenderingContext2D, command: Extract<DrawingCommand, {type: 'path'}>, origin: {x: number, y: number}, progress: number) => {
-    if (command.points.length < 2) return;
+    // Safety checks for missing data
+    if (!command || !command.points || !origin) return;
+    if (!Array.isArray(command.points) || command.points.length < 2) return;
+
+    // Check if first point is valid
+    if (!command.points[0] || typeof command.points[0].x !== 'number' || typeof command.points[0].y !== 'number') return;
+
     const totalPoints = command.points.length - 1;
     const pointsToDraw = totalPoints * progress;
     const lastFullPointIndex = Math.floor(pointsToDraw);
-    
+
     ctx.beginPath();
     ctx.moveTo(origin.x + command.points[0].x, origin.y + command.points[0].y);
 
     for (let i = 0; i < lastFullPointIndex; i++) {
-        ctx.lineTo(origin.x + command.points[i+1].x, origin.y + command.points[i+1].y);
+        const point = command.points[i + 1];
+        if (!point || typeof point.x !== 'number' || typeof point.y !== 'number') continue;
+        ctx.lineTo(origin.x + point.x, origin.y + point.y);
     }
-    
+
     if (progress < 1 && lastFullPointIndex < totalPoints) {
         const lastPoint = command.points[lastFullPointIndex];
         const nextPoint = command.points[lastFullPointIndex + 1];
-        const segmentProgress = pointsToDraw - lastFullPointIndex;
-        const currentX = lastPoint.x + (nextPoint.x - lastPoint.x) * segmentProgress;
-        const currentY = lastPoint.y + (nextPoint.y - lastPoint.y) * segmentProgress;
-        ctx.lineTo(origin.x + currentX, origin.y + currentY);
+        if (lastPoint && nextPoint && typeof lastPoint.x === 'number' && typeof nextPoint.x === 'number') {
+            const segmentProgress = pointsToDraw - lastFullPointIndex;
+            const currentX = lastPoint.x + (nextPoint.x - lastPoint.x) * segmentProgress;
+            const currentY = lastPoint.y + (nextPoint.y - lastPoint.y) * segmentProgress;
+            ctx.lineTo(origin.x + currentX, origin.y + currentY);
+        }
     }
 
     ctx.stroke();
