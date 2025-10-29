@@ -1,5 +1,0 @@
-{
-  "name": "AI Drawing Assistant",
-  "description": "An interactive web application that allows users to request visual explanations through natural language. The AI generates a hand-drawn style illustration to match the request.",
-  "requestFramePermissions": []
-}
