@@ -1,11 +1,12 @@
+
+
+
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { Controls } from './components/Controls';
 import { getInitialPlan, generateSpeech } from './services/geminiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { MailIcon, GithubIcon } from './components/icons';
-
-console.log('AI Drawing Assistant Deployed: ' + new Date().toISOString());
 
 // This is the code that will run in the background thread to avoid blocking the UI.
 const audioWorkerCode = `
@@ -83,6 +84,7 @@ const App: React.FC = () => {
   const overallExplanationRef = useRef<string>('');
   const playbackOffsetRef = useRef<number>(0); 
   const startedAtRef = useRef<number>(0); 
+  const isCancelledRef = useRef<boolean>(false);
   
   const [animationProgress, setAnimationProgress] = useState(0);
 
@@ -138,6 +140,7 @@ const App: React.FC = () => {
     }
 
     stopEverything();
+    isCancelledRef.current = false;
     setStatus('THINKING');
     setError(null);
     setWhiteboardSteps([]);
@@ -154,6 +157,7 @@ const App: React.FC = () => {
 
     try {
       const response: AIResponse = await getInitialPlan(prompt);
+      if (isCancelledRef.current) return;
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
@@ -171,49 +175,9 @@ const App: React.FC = () => {
         setExplanation(PREPARING_MESSAGES[msgIndex]);
       }, 2500);
 
-      const base64AudioClips: (string | null)[] = [];
-      const stepsToProcess = response.whiteboard;
-
-      for (let i = 0; i < stepsToProcess.length; i++) {
-        const step = stepsToProcess[i];
-        setExplanation(`Generating audio narration... (${i + 1} of ${stepsToProcess.length})`);
-        
-        let success = false;
-        let attempts = 0;
-        while (!success && attempts < 3) {
-          try {
-            console.log(`[Speech Gen] Requesting clip ${i + 1} (Attempt ${attempts + 1})...`);
-            const audioClip = await generateSpeech(step.explanation);
-            base64AudioClips.push(audioClip);
-            console.log(`[Speech Gen] Received clip ${i + 1}. Success: ${!!audioClip}`);
-            success = true;
-          } catch (err: any) {
-            console.warn(`[Speech Gen] Attempt ${attempts} failed for clip ${i + 1}.`, err);
-            const errString = err.toString();
-
-            if (errString.includes('429')) {
-              const retryMatch = errString.match(/Please retry in ([\d.]+)s/);
-              if (retryMatch && retryMatch[1]) {
-                const delaySeconds = parseFloat(retryMatch[1]);
-                const delayMs = Math.ceil(delaySeconds * 1000) + 500; // Add a buffer
-                console.log(`[Speech Gen] Rate limit hit. Retrying in ${delayMs}ms.`);
-                setExplanation(`Rate limit reached. Waiting for ${Math.ceil(delaySeconds)}s...`);
-                await new Promise(resolve => setTimeout(resolve, delayMs));
-                continue; // Retry without incrementing attempts for recoverable 429 errors
-              }
-            }
-            
-            // For other errors, increment attempts and wait before retrying.
-            attempts++;
-            if (attempts < 3) {
-              await new Promise(resolve => setTimeout(resolve, 2000 * attempts));
-            } else {
-              console.error(`[Speech Gen] Failed to generate audio for step ${i + 1} after 3 attempts.`);
-              base64AudioClips.push(null); // Push null and move on
-            }
-          }
-        }
-      }
+      const speechPromises = response.whiteboard.map(step => generateSpeech(step.explanation));
+      const base64AudioClips = await Promise.all(speechPromises);
+      if (isCancelledRef.current) return;
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
@@ -235,6 +199,7 @@ const App: React.FC = () => {
       setStatus('DRAWING');
 
     } catch (err) {
+      if (isCancelledRef.current) return;
       console.error(err);
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
@@ -257,6 +222,17 @@ const App: React.FC = () => {
       setIsPaused(p => !p);
     }
   }, [status]);
+
+  const handleCancel = useCallback(() => {
+    isCancelledRef.current = true;
+    if (statusMessageIntervalRef.current) {
+      clearInterval(statusMessageIntervalRef.current);
+    }
+    stopEverything();
+    setStatus('IDLE');
+    setExplanation('Enter a prompt and I\'ll create a voice-led visual explanation for you.');
+    setError(null);
+  }, [stopEverything]);
   
   useEffect(() => {
     playbackOffsetRef.current = 0;
@@ -359,7 +335,7 @@ const App: React.FC = () => {
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative">
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pointer-events-none">
             <div className="pointer-events-auto">
-                <img src="icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto" />
+                <img src="/icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto" />
             </div>
             <div className="pointer-events-auto">
                 <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-sm text-gray-500 shadow-lg">
@@ -368,7 +344,7 @@ const App: React.FC = () => {
                     <a href="mailto:team@dodgysoft.dev" target="_blank" rel="noopener noreferrer" title="Email Us" className="text-gray-500 hover:text-cyan-400 transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(34,211,238,0.8)]">
                         <MailIcon className="w-5 h-5" />
                     </a>
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" title="View on GitHub" className="text-gray-500 hover:text-white transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">
+                    <a href="https://github.com/MUNIB952/chalking" target="_blank" rel="noopener noreferrer" title="View on GitHub" className="text-gray-500 hover:text-white transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">
                         <GithubIcon className="w-5 h-5" />
                     </a>
                 </div>
@@ -394,6 +370,7 @@ const App: React.FC = () => {
             onSubmit={handleSubmit}
             onRepeat={handleRepeat}
             onTogglePause={handleTogglePause}
+            onCancel={handleCancel}
         />
     </div>
   );

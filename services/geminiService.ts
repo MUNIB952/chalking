@@ -1,3 +1,6 @@
+
+
+
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { AIResponse } from '../types';
 
@@ -330,7 +333,7 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       `;
 
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.5-pro',
       contents: fullPrompt,
       config: {
         responseMimeType: 'application/json',
@@ -341,16 +344,11 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
     // Use the robust parser on the response text.
     return robustJsonParse(response.text);
   } catch (e) {
-    console.error("Error in getInitialPlan:", e);
-    if (e instanceof Error) {
-        if (e.message.includes('quota')) {
-            throw new Error(QUOTA_ERROR_MESSAGE);
-        }
-        if (e.message.toLowerCase().includes('fetch') || e.message.includes('504')) {
-             throw new Error('The request to the AI service timed out. This can happen with very complex prompts. Please try a simpler prompt or try again later.');
-        }
+    console.error(e);
+    if (e instanceof Error && e.message.includes('quota')) {
+        throw new Error(QUOTA_ERROR_MESSAGE);
     }
-    throw new Error('Could not generate a plan from the prompt. An unknown error occurred.');
+    throw new Error('Could not generate a plan from the prompt.');
   }
 };
 
@@ -376,7 +374,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
 
   } catch (e) {
     console.error("Speech generation failed", e);
-    // Re-throw the error so the caller can implement retry logic
-    throw e;
+    // Don't throw an error, just return null so the animation can proceed without audio.
+    return null; 
   }
 };

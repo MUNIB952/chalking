@@ -60,60 +60,10 @@ function calculateIntersectionOfTwoCircles(
     return [intersection1, intersection2];
 }
 
-// --- Robust Color Sanitization ---
-
-// Helper to calculate luminance (perceived brightness) of a hex color
-const getLuminance = (hex: string): number => {
-    // Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
-    const shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
-    hex = hex.replace(shorthandRegex, (m, r, g, b) => r + r + g + g + b + b);
-
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    if (!result) return 0;
-
-    let [r, g, b] = result.slice(1).map(c => parseInt(c, 16));
-
-    // Formula for relative luminance
-    r = r / 255;
-    g = g / 255;
-    b = b / 255;
-    
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-};
-
-const sanitizeColor = (color: string | undefined, defaultColor: string): string => {
-    if (!color) return defaultColor;
-    const lowerColor = color.toLowerCase().trim();
-    
-    const isValidHex = /^#([0-9A-F]{3,4}){1,2}$/i.test(lowerColor);
-
-    if (!isValidHex) {
-        // The AI was instructed to use hex, but might return a name.
-        // Reject common dark color names as a safeguard.
-        if (lowerColor === 'black' || lowerColor.includes('grey') || lowerColor.includes('gray') || lowerColor === 'navy') {
-            return defaultColor;
-        }
-        // If it's another name (e.g., "cyan"), it might be valid, but to be safe against
-        // unexpected dark names and enforce consistency, we fall back. The prompt asks for hex.
-        return defaultColor;
-    }
-
-    // NEW: Luminance check. A value of 0 is pure black, 1 is pure white.
-    // A threshold of 0.2 is a good baseline for visibility on a pure black background.
-    const LUMINANCE_THRESHOLD = 0.2;
-    if (getLuminance(lowerColor) < LUMINANCE_THRESHOLD) {
-        // This color is too dark, even if it's a valid hex code.
-        return defaultColor;
-    }
-    
-    return color;
-};
-
 
 // --- Animated Drawing Functions ---
 
 const drawAnimatedArrow = (ctx: CanvasRenderingContext2D, annotation: ArrowAnnotation, origin: Point, progress: number) => {
-    if (!annotation || !annotation.start || !annotation.end || !origin) return;
     const from = { x: (origin as AbsolutePoint).x + (annotation.start as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (annotation.start as AbsolutePoint).y };
     const to = { x: (origin as AbsolutePoint).x + (annotation.end as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (annotation.end as AbsolutePoint).y };
     
@@ -155,7 +105,7 @@ const drawAnimatedArrow = (ctx: CanvasRenderingContext2D, annotation: ArrowAnnot
 };
 
 const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotation, origin: Point, progress: number) => {
-    if (progress <= 0 || !annotation || !annotation.point || !origin) return;
+    if (progress <= 0) return;
 
     const { text, point, fontSize, isContextual } = annotation;
     const x = (origin as AbsolutePoint).x + (point as AbsolutePoint).x;
@@ -194,7 +144,6 @@ const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotat
 };
 
 const drawAnimatedRectangle = (ctx: CanvasRenderingContext2D, command: Extract<DrawingCommand, {type: 'rectangle'}>, origin: Point, progress: number) => {
-    if (!command || !command.center || !origin) return;
     const w = command.width;
     const h = command.height;
     const x = (origin as AbsolutePoint).x + (command.center as AbsolutePoint).x - w / 2;
@@ -237,7 +186,6 @@ const drawAnimatedRectangle = (ctx: CanvasRenderingContext2D, command: Extract<D
 };
 
 const drawAnimatedCircle = (ctx: CanvasRenderingContext2D, command: Extract<DrawingCommand, {type: 'circle'}>, origin: Point, progress: number) => {
-    if (!command || !command.center || !origin) return;
     const centerX = (origin as AbsolutePoint).x + (command.center as AbsolutePoint).x;
     const centerY = (origin as AbsolutePoint).y + (command.center as AbsolutePoint).y;
     
@@ -267,7 +215,7 @@ const drawAnimatedCircle = (ctx: CanvasRenderingContext2D, command: Extract<Draw
 };
 
 const drawAnimatedPath = (ctx: CanvasRenderingContext2D, points: Point[], origin: Point, progress: number) => {
-    if (!points || points.length < 2 || !points[0] || !origin) return;
+    if (points.length < 2) return;
 
     const totalSegments = points.length - 1;
     const segmentsToDraw = totalSegments * progress;
@@ -278,7 +226,6 @@ const drawAnimatedPath = (ctx: CanvasRenderingContext2D, points: Point[], origin
 
     for (let i = 0; i < lastFullSegmentIndex; i++) {
         const p_next = points[i + 1] as AbsolutePoint;
-        if (!p_next) continue;
         if (p_next.cx != null && p_next.cy != null) {
             ctx.quadraticCurveTo((origin as AbsolutePoint).x + p_next.cx, (origin as AbsolutePoint).y + p_next.cy, (origin as AbsolutePoint).x + p_next.x, (origin as AbsolutePoint).y + p_next.y);
         } else {
@@ -289,7 +236,6 @@ const drawAnimatedPath = (ctx: CanvasRenderingContext2D, points: Point[], origin
     if (progress < 1 && lastFullSegmentIndex < totalSegments) {
         const p_start = points[lastFullSegmentIndex] as AbsolutePoint;
         const p_end = points[lastFullSegmentIndex + 1] as AbsolutePoint;
-        if (!p_start || !p_end) return;
         const segmentProgress = segmentsToDraw - lastFullSegmentIndex;
 
         const startPt = { x: (origin as AbsolutePoint).x + p_start.x, y: (origin as AbsolutePoint).y + p_start.y };
@@ -311,18 +257,14 @@ const drawAnimatedPath = (ctx: CanvasRenderingContext2D, points: Point[], origin
 };
 
 const drawAnimatedStrikethrough = (ctx: CanvasRenderingContext2D, annotation: StrikethroughAnnotation, origin: Point, progress: number) => {
-    if (!annotation || !annotation.points || annotation.points.length === 0 || !origin) return;
     const originalStroke = ctx.strokeStyle;
     const originalWidth = ctx.lineWidth;
-    ctx.strokeStyle = sanitizeColor(annotation.color, '#ef4444');
+    ctx.strokeStyle = annotation.color || '#ef4444';
     ctx.lineWidth = 2;
-    const wavyPoints = annotation.points.map((p, i) => {
-        if (!p) return null;
-        return {
-            ...p,
-            y: (p as AbsolutePoint).y + Math.sin(i * 0.8) * 5,
-        }
-    }).filter(Boolean) as Point[];
+    const wavyPoints = annotation.points.map((p, i) => ({
+        ...p,
+        y: (p as AbsolutePoint).y + Math.sin(i * 0.8) * 5,
+    }));
     drawAnimatedPath(ctx, wavyPoints, origin, progress);
     ctx.strokeStyle = originalStroke;
     ctx.lineWidth = originalWidth;
@@ -330,7 +272,7 @@ const drawAnimatedStrikethrough = (ctx: CanvasRenderingContext2D, annotation: St
 
 
 const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, animationProgress: number, idsToExclude?: Set<string>) => {
-  if (!step || !step.origin) return;
+  if (!step.origin) return;
 
   const defaultColor = '#FFFFFF';
   ctx.strokeStyle = defaultColor;
@@ -341,8 +283,8 @@ const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, an
 
   const allItems = [...(step.drawingPlan || []), ...step.annotations];
   const itemsToDraw = idsToExclude 
-      ? allItems.filter(item => item && (!item.id || !idsToExclude.has(item.id)))
-      : allItems.filter(Boolean);
+      ? allItems.filter(item => !item.id || !idsToExclude.has(item.id))
+      : allItems;
 
   const totalItems = itemsToDraw.length;
   if (totalItems === 0) return;
@@ -351,8 +293,13 @@ const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, an
   const currentItemIndex = Math.floor(currentItemIndexFloat);
 
   const drawItem = (item: DrawingCommand | Annotation, progress: number) => {
-      const itemColor = sanitizeColor(item.color, defaultColor);
+      let itemColor = item.color || defaultColor;
       
+      const forbiddenColors = ['#000000', '#0a0a0a', '#18181b', '#333333'];
+      if (forbiddenColors.includes(itemColor.toLowerCase())) {
+          itemColor = defaultColor;
+      }
+
       ctx.strokeStyle = itemColor;
       ctx.fillStyle = itemColor;
 
@@ -365,25 +312,20 @@ const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, an
   };
 
   for (let i = 0; i < currentItemIndex; i++) {
-      if (itemsToDraw[i]) drawItem(itemsToDraw[i], 1);
+      drawItem(itemsToDraw[i], 1);
   }
 
   if (currentItemIndex < totalItems) {
       const item = itemsToDraw[currentItemIndex];
-      if (item) {
-        const itemProgress = currentItemIndexFloat - currentItemIndex;
-        drawItem(item, itemProgress);
-      }
+      const itemProgress = currentItemIndexFloat - currentItemIndex;
+      drawItem(item, itemProgress);
   }
 };
 
-const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, progress: number): Point | null => {
-    let pos: Point | null = null;
-    if (!item || !origin) return null;
-    
+const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, progress: number): Point => {
+    let pos: Point = { x: 0, y: 0 };
     switch(item.type) {
-        case 'arrow': {
-            if (!item.start || !item.end) break;
+        case 'arrow':
             const from = { x: (origin as AbsolutePoint).x + (item.start as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (item.start as AbsolutePoint).y };
             const to = { x: (origin as AbsolutePoint).x + (item.end as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (item.end as AbsolutePoint).y };
             if (item.controlPoint) {
@@ -393,23 +335,17 @@ const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, pro
                 pos = { x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress };
             }
             break;
-        }
-        case 'text': {
-            if (!item.point) break;
+        case 'text':
             pos = { x: (origin as AbsolutePoint).x + (item.point as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (item.point as AbsolutePoint).y };
             break;
-        }
-        case 'circle': {
-            if (!item.center) break;
+        case 'circle':
             const angle = -Math.PI / 2 + 2 * Math.PI * progress;
             pos = {
                 x: (origin as AbsolutePoint).x + (item.center as AbsolutePoint).x + item.radius * Math.cos(angle),
                 y: (origin as AbsolutePoint).y + (item.center as AbsolutePoint).y + item.radius * Math.sin(angle),
             };
             break;
-        }
-        case 'rectangle': {
-             if (!item.center) break;
+        case 'rectangle':
              const w = item.width;
              const h = item.height;
              const x = (origin as AbsolutePoint).x + (item.center as AbsolutePoint).x - w / 2;
@@ -421,10 +357,9 @@ const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, pro
              else if (lengthToDraw <= w * 2 + h) pos = { x: x + w - (lengthToDraw - w - h), y: y + h };
              else pos = { x: x, y: y + h - (lengthToDraw - w * 2 - h) };
              break;
-        }
         case 'path':
-        case 'strikethrough': {
-            if (!item.points || item.points.length < 2) break;
+        case 'strikethrough':
+            if (item.points.length < 2) break;
             const totalSegments = item.points.length - 1;
             const segmentsToDraw = totalSegments * progress;
             const lastFullSegmentIndex = Math.min(Math.floor(segmentsToDraw), totalSegments - 1);
@@ -432,8 +367,6 @@ const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, pro
             const p_start = item.points[lastFullSegmentIndex];
             const p_end = item.points[lastFullSegmentIndex + 1];
 
-            if (!p_start || !p_end) break;
-            
             const startPt = { x: (origin as AbsolutePoint).x + (p_start as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (p_start as AbsolutePoint).y };
             const endPt = { x: (origin as AbsolutePoint).x + (p_end as AbsolutePoint).x, y: (origin as AbsolutePoint).y + (p_end as AbsolutePoint).y };
             
@@ -444,7 +377,6 @@ const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, pro
                 pos = { x: startPt.x + (endPt.x - startPt.x) * segmentProgress, y: startPt.y + (endPt.y - startPt.y) * segmentProgress };
             }
             break;
-        }
     }
     return pos;
 };
@@ -477,14 +409,13 @@ export const Canvas: React.FC<CanvasProps> = ({
     const circleMetaCache = new Map<string, { command: CircleCommand; origin: AbsolutePoint }>();
     newSteps.forEach((step: WhiteboardStep) => {
         (step.drawingPlan || []).forEach(item => {
-            if (item && item.type === 'circle' && item.id) {
+            if (item.type === 'circle' && item.id) {
                 circleMetaCache.set(item.id, { command: item, origin: step.origin });
             }
         });
     });
 
     const resolvePoint = (point: Point, currentStepOrigin: AbsolutePoint): AbsolutePoint => {
-        if (!point) return { x: 0, y: 0};
         if (!isRelativePoint(point)) {
             return point as AbsolutePoint;
         }
@@ -492,7 +423,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         const meta1 = circleMetaCache.get(point.referenceCircleId1);
         const meta2 = circleMetaCache.get(point.referenceCircleId2);
 
-        if (!meta1 || !meta2 || !meta1.command.center || !meta2.command.center) {
+        if (!meta1 || !meta2) {
             console.error("Unresolved reference circles for relative point", point);
             return { x: 0, y: 0 };
         }
@@ -529,9 +460,8 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     for (const step of newSteps) {
-        if (!step) continue;
         const origin = step.origin as AbsolutePoint;
-        const allItems: (DrawingCommand | Annotation)[] = [...(step.drawingPlan || []), ...step.annotations].filter(Boolean);
+        const allItems: (DrawingCommand | Annotation)[] = [...(step.drawingPlan || []), ...step.annotations];
         
         for (const item of allItems) {
             if ('center' in item && item.center) item.center = resolvePoint(item.center, origin);
@@ -545,26 +475,6 @@ export const Canvas: React.FC<CanvasProps> = ({
     return newSteps;
   }, [steps]);
 
-  useEffect(() => {
-    // Center the view on the first step when drawing begins.
-    if (status === 'DRAWING' && currentStepIndex === 0 && resolvedSteps.length > 0) {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const firstStepOrigin = resolvedSteps[0].origin as AbsolutePoint;
-        
-        // Start with a reasonable zoom level
-        const initialZoom = 0.7;
-
-        setViewTransform({
-          x: rect.width / 2 - firstStepOrigin.x * initialZoom,
-          y: rect.height / 2 - firstStepOrigin.y * initialZoom,
-          zoom: initialZoom,
-        });
-      }
-    }
-  }, [status, currentStepIndex, resolvedSteps]);
-
   const currentStep = useMemo(() => resolvedSteps?.[currentStepIndex], [resolvedSteps, currentStepIndex]);
   
   const currentStepItemIds = useMemo(() => {
@@ -572,7 +482,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (!currentStep) return itemSet;
     const allItems = [...(currentStep.drawingPlan || []), ...currentStep.annotations];
     for (const item of allItems) {
-        if (item && item.id) {
+        if (item.id) {
             itemSet.add(item.id);
         }
     }
@@ -587,7 +497,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         if (!step) continue;
         const allItems = [...(step.drawingPlan || []), ...step.annotations];
         for (const item of allItems) {
-            if (item && item.id) {
+            if (item.id) {
                 map.set(item.id, { ...item, stepOrigin: step.origin });
             }
         }
@@ -624,7 +534,7 @@ export const Canvas: React.FC<CanvasProps> = ({
             const itemWithOrigin = itemsById.get(id);
             if (itemWithOrigin && itemWithOrigin.type === 'text') {
                 const { stepOrigin, ...item } = itemWithOrigin;
-                ctx.fillStyle = sanitizeColor(item.color, '#FFFFFF');
+                ctx.fillStyle = item.color || '#FFFFFF';
                 drawAnimatedText(ctx, item as TextAnnotation, stepOrigin, 1);
             }
         }
@@ -642,9 +552,8 @@ export const Canvas: React.FC<CanvasProps> = ({
             const itemWithOrigin = itemsById.get(id);
             if (itemWithOrigin) {
                 const { stepOrigin, ...item } = itemWithOrigin;
-                const highlightColor = sanitizeColor(item.color, '#06b6d4');
-                ctx.strokeStyle = highlightColor;
-                ctx.fillStyle = highlightColor;
+                ctx.strokeStyle = item.color || '#06b6d4';
+                ctx.fillStyle = item.color || '#06b6d4';
                 ctx.lineWidth = 4;
 
                 if (item.type === 'rectangle') drawAnimatedRectangle(ctx, item, stepOrigin, 1);
@@ -701,7 +610,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       return;
     }
     
-    const drawableItems = [...(currentStep.drawingPlan || []), ...currentStep.annotations].filter(Boolean);
+    const drawableItems = [...(currentStep.drawingPlan || []), ...currentStep.annotations];
     if (drawableItems.length > 0) {
         const totalItems = drawableItems.length;
         const currentItemIndexFloat = animationProgress * totalItems;

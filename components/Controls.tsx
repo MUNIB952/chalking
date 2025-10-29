@@ -1,10 +1,9 @@
 
 
-
 import React, { useState, useEffect } from 'react';
 import { EXAMPLE_PROMPTS } from '../constants';
 import { AppStatus, WhiteboardStep } from '../types';
-import { SendIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, PlayIcon, PauseIcon } from './icons';
+import { SendIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, PlayIcon, PauseIcon, StopIcon } from './icons';
 
 interface ControlsProps {
   status: AppStatus;
@@ -16,6 +15,7 @@ interface ControlsProps {
   onSubmit: (prompt: string) => void;
   onRepeat: () => void;
   onTogglePause: () => void;
+  onCancel: () => void;
 }
 
 const ExamplePromptsMarquee: React.FC<{ onExampleClick: (prompt: string) => void, isDisabled: boolean }> = ({ onExampleClick, isDisabled }) => {
@@ -50,6 +50,7 @@ export const Controls: React.FC<ControlsProps> = ({
   onSubmit,
   onRepeat,
   onTogglePause,
+  onCancel,
 }) => {
   const [prompt, setPrompt] = useState('');
   const [isVisible, setIsVisible] = useState(true);
@@ -90,18 +91,33 @@ export const Controls: React.FC<ControlsProps> = ({
               </div>
               
               {/* Progress Bar and Status */}
-              <div className={`absolute inset-0 transition-opacity duration-300 flex flex-col justify-center ${!showIdleState ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                 <span className="text-sm text-cyan-300 text-glow-cyan truncate">{explanation}</span>
-                 { (status === 'DRAWING' || status === 'DONE') && steps.length > 0 && (
-                   <>
-                    <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
-                      <div 
-                        className="bg-cyan-400 h-1.5 rounded-full transition-all duration-500 ease-out" 
-                        style={{ width: `${progressPercentage}%` }}
-                      ></div>
-                    </div>
-                   </>
-                 )}
+              <div className={`absolute inset-0 transition-opacity duration-300 flex items-center justify-between ${!showIdleState ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                  <div className="flex-grow min-w-0">
+                      <div className="flex flex-col justify-center h-full">
+                          <span className="text-sm text-cyan-300 text-glow-cyan truncate">{explanation}</span>
+                          { (status === 'DRAWING' || status === 'DONE') && steps.length > 0 && (
+                              <div className="w-full bg-slate-700 rounded-full h-1.5 mt-1">
+                              <div 
+                                  className="bg-cyan-400 h-1.5 rounded-full transition-all duration-500 ease-out" 
+                                  style={{ width: `${progressPercentage}%` }}
+                              ></div>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+                  
+                  { (status === 'THINKING' || status === 'PREPARING') && (
+                      <div className="flex-shrink-0 ml-3">
+                          <button
+                              onClick={onCancel}
+                              className="px-3 py-1.5 bg-red-500/20 border border-red-500/30 text-red-200 rounded-full text-sm hover:bg-red-500/40 transition-colors flex items-center gap-1.5"
+                              aria-label="Cancel generation"
+                          >
+                              <StopIcon className="w-4 h-4" />
+                              <span>Cancel</span>
+                          </button>
+                      </div>
+                  )}
               </div>
           </div>
           
