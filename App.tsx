@@ -155,28 +155,99 @@ const App: React.FC = () => {
       
       // --- PRE-VALIDATION SANITIZATION ---
       // This makes the app resilient to minor data errors from the AI, preventing crashes.
+
+      // Helper function to check if a value is a valid point object
+      const isValidPointObject = (p: any): boolean => {
+        if (!p || typeof p !== 'object') return false;
+        // Check for absolute point (x, y)
+        if (typeof p.x === 'number' && typeof p.y === 'number') return true;
+        // Check for relative point (referenceCircleId1, referenceCircleId2, intersectionIndex)
+        if (typeof p.referenceCircleId1 === 'string' &&
+            typeof p.referenceCircleId2 === 'string' &&
+            typeof p.intersectionIndex === 'number') return true;
+        return false;
+      };
+
       if (response && Array.isArray(response.whiteboard)) {
         for (const step of response.whiteboard) {
           // Sanitize drawingPlan
           if (Array.isArray(step.drawingPlan)) {
             step.drawingPlan = step.drawingPlan.filter(cmd => {
-              if (cmd.type === 'path') {
-                if (!Array.isArray(cmd.points)) return false;
-                cmd.points = cmd.points.filter(p => p && typeof p === 'object');
-                return cmd.points.length >= 2;
+              if (!cmd || !cmd.type) return false;
+
+              switch (cmd.type) {
+                case 'rectangle':
+                  // Rectangle must have a valid center point
+                  if (!isValidPointObject(cmd.center)) {
+                    console.warn('Filtering out rectangle with invalid center:', cmd);
+                    return false;
+                  }
+                  return true;
+
+                case 'circle':
+                  // Circle must have a valid center point
+                  if (!isValidPointObject(cmd.center)) {
+                    console.warn('Filtering out circle with invalid center:', cmd);
+                    return false;
+                  }
+                  return true;
+
+                case 'path':
+                  // Path must have at least 2 valid points
+                  if (!Array.isArray(cmd.points)) return false;
+                  cmd.points = cmd.points.filter(p => isValidPointObject(p));
+                  if (cmd.points.length < 2) {
+                    console.warn('Filtering out path with insufficient valid points:', cmd);
+                    return false;
+                  }
+                  return true;
+
+                default:
+                  return true;
               }
-              return true;
             });
           }
+
           // Sanitize annotations
           if (Array.isArray(step.annotations)) {
             step.annotations = step.annotations.filter(ann => {
-              if (ann.type === 'strikethrough') {
-                if (!Array.isArray(ann.points)) return false;
-                ann.points = ann.points.filter(p => p && typeof p === 'object');
-                return ann.points.length >= 2;
+              if (!ann || !ann.type) return false;
+
+              switch (ann.type) {
+                case 'text':
+                  // Text must have a valid point
+                  if (!isValidPointObject(ann.point)) {
+                    console.warn('Filtering out text annotation with invalid point:', ann);
+                    return false;
+                  }
+                  return true;
+
+                case 'arrow':
+                  // Arrow must have valid start and end points
+                  if (!isValidPointObject(ann.start) || !isValidPointObject(ann.end)) {
+                    console.warn('Filtering out arrow with invalid start/end:', ann);
+                    return false;
+                  }
+                  // If controlPoint exists, it must be valid
+                  if (ann.controlPoint && !isValidPointObject(ann.controlPoint)) {
+                    console.warn('Arrow has invalid controlPoint, removing it:', ann);
+                    delete ann.controlPoint;
+                  }
+                  return true;
+
+                case 'strikethrough':
+                  // Strikethrough must have at least 2 valid points
+                  if (!Array.isArray(ann.points)) return false;
+                  ann.points = ann.points.filter(p => isValidPointObject(p));
+                  if (ann.points.length < 2) {
+                    console.warn('Filtering out strikethrough with insufficient valid points:', ann);
+                    return false;
+                  }
+                  return true;
+
+                default:
+                  return true;
               }
-              return true;
             });
           }
         }
