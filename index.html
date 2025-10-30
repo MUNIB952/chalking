@@ -2,23 +2,77 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icons.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Drawing Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
+    <style>
+      html, body, #root {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        background-color: #0a0a0a;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      .wait-cursor {
+        cursor: wait;
+      }
+      .grab-cursor {
+        cursor: grab;
+      }
+      .grabbing-cursor {
+        cursor: grabbing;
+      }
+
+      /* Added for status text animation */
+      @keyframes slide-in-up {
+        from {
+          transform: translateY(100%);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+      .animate-slide-in-up {
+        animation: slide-in-up 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+      }
+      .text-glow-cyan {
+        text-shadow: 0 0 8px rgba(34, 211, 238, 0.6), 0 0 20px rgba(34, 211, 238, 0.4);
+      }
+
+      /* Updated for marquee animation */
+      @keyframes marquee {
+        from {
+          transform: translateX(0);
+        }
+        to {
+          transform: translateX(-50%);
+        }
+      }
+      .animate-marquee {
+        animation: marquee 40s linear infinite; /* Slower animation */
+      }
+      
+      /* New class for fading edges effect */
+      .fade-mask-x-strong {
+        mask-image: linear-gradient(to right, transparent 0%, black 5%, black 80%, transparent 100%);
+      }
+    </style>
   <script type="importmap">
 {
   "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.24.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "react": "https://aistudiocdn.com/react@^19.2.0",
     "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "path": "https://aistudiocdn.com/path@^0.12.7",
     "vite": "https://aistudiocdn.com/vite@^7.1.12",
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.0",
-    "url": "https://aistudiocdn.com/url@^0.11.4",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.27.0"
+    "url": "https://aistudiocdn.com/url@^0.11.4"
   }
 }
 </script>

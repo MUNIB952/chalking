@@ -1,5 +1,3 @@
-
-
 import React from 'react';
 
 export const PenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
@@ -65,8 +63,27 @@ export const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
-export const StopIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M6 6h12v12H6z"></path>
+export const ErrorIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+);
+
+export const LogoIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg viewBox="0 0 200 24" height="24" xmlns="http://www.w3.org/2000/svg" {...props}>
+      <defs>
+        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" style={{stopColor: 'rgb(34, 211, 238)', stopOpacity:1}} />
+          <stop offset="100%" style={{stopColor: 'rgb(217, 70, 239)', stopOpacity:1}} />
+        </linearGradient>
+      </defs>
+      <path d="M12 2L2 7L12 12L22 7L12 2Z" stroke="url(#grad1)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" transform="translate(0, -2)"/>
+      <path d="M2 17L12 22L22 17" stroke="url(#grad1)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" transform="translate(0, -2)"/>
+      <path d="M2 12L12 17L22 12" stroke="url(#grad1)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" transform="translate(0, -2)"/>
+      <text x="30" y="18" fontFamily="sans-serif" fontSize="16" fontWeight="bold" fill="white">
+        AI Drawing Assistant
+      </text>
     </svg>
 );
