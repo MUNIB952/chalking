@@ -336,7 +336,7 @@ Before outputting the final JSON, you MUST perform a final pass over the entire 
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-2.5-flash',
+            model: 'gemini-2.5-pro',
             contents: { parts: [{ text: fullPrompt }] },
             config: {
                 responseMimeType: 'application/json',
