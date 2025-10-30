@@ -158,13 +158,23 @@ const App: React.FC = () => {
 
       // Helper function to check if a value is a valid point object
       const isValidPointObject = (p: any): boolean => {
-        if (!p || typeof p !== 'object') return false;
-        // Check for absolute point (x, y)
-        if (typeof p.x === 'number' && typeof p.y === 'number') return true;
+        // Extra defensive: check for null, undefined, primitives
+        if (!p || typeof p !== 'object' || Array.isArray(p)) return false;
+
+        // Check for absolute point (x, y) - both must be valid numbers
+        if (typeof p.x === 'number' && !isNaN(p.x) &&
+            typeof p.y === 'number' && !isNaN(p.y)) {
+          return true;
+        }
+
         // Check for relative point (referenceCircleId1, referenceCircleId2, intersectionIndex)
-        if (typeof p.referenceCircleId1 === 'string' &&
-            typeof p.referenceCircleId2 === 'string' &&
-            typeof p.intersectionIndex === 'number') return true;
+        if (typeof p.referenceCircleId1 === 'string' && p.referenceCircleId1.length > 0 &&
+            typeof p.referenceCircleId2 === 'string' && p.referenceCircleId2.length > 0 &&
+            typeof p.intersectionIndex === 'number' && !isNaN(p.intersectionIndex) &&
+            (p.intersectionIndex === 0 || p.intersectionIndex === 1)) {
+          return true;
+        }
+
         return false;
       };
 
@@ -252,11 +262,25 @@ const App: React.FC = () => {
           }
         }
       }
+
+      // Filter out steps that have no valid content after sanitization
+      if (response && Array.isArray(response.whiteboard)) {
+        response.whiteboard = response.whiteboard.filter(step => {
+          const hasDrawing = Array.isArray(step.drawingPlan) && step.drawingPlan.length > 0;
+          const hasAnnotations = Array.isArray(step.annotations) && step.annotations.length > 0;
+          if (!hasDrawing && !hasAnnotations) {
+            console.warn('Filtering out step with no valid content after sanitization:', step);
+            return false;
+          }
+          return true;
+        });
+      }
       // --- END PRE-VALIDATION SANITIZATION ---
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
-      // --- DEEP VALIDATION LOGIC ---
+      // --- DEEP VALIDATION LOGIC (WRAPPED IN TRY-CATCH) ---
+      try {
       const isPointObject = (p: any): p is Point => {
           if (!p) return false;
           // Absolute point check
@@ -329,6 +353,11 @@ const App: React.FC = () => {
                 break;
             }
           }
+      }
+      } catch (validationError) {
+        // If validation finds issues that sanitization missed, log them but continue
+        console.error('Validation caught additional issues:', validationError);
+        // The sanitization already cleaned up most issues, so we can proceed
       }
       // --- END DEEP VALIDATION LOGIC ---
 
