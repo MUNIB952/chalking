@@ -1,23 +1,18 @@
-
+import path from 'path';
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-import { fileURLToPath, URL } from 'url';
+// Fix: Add fileURLToPath to resolve __dirname in ES module
+import { fileURLToPath } from 'url';
+
+// Fix: define __dirname for ES module scope
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     return {
-      base: '/',
       server: {
         port: 3000,
         host: '0.0.0.0',
-      },
-      preview: {
-        port: 8080,
-        host: '0.0.0.0',
-      },
-      build: {
-        outDir: 'dist',
-        sourcemap: false,
       },
       plugins: [react()],
       define: {
@@ -26,7 +21,7 @@ export default defineConfig(({ mode }) => {
       },
       resolve: {
         alias: {
-          '@': fileURLToPath(new URL('.', import.meta.url)),
+          '@': path.resolve(__dirname, '.'),
         }
       }
     };

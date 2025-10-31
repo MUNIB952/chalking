@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { WhiteboardStep, Annotation, AppStatus, ArrowAnnotation, DrawingCommand, TextAnnotation, StrikethroughAnnotation, Point, AbsolutePoint, isRelativePoint, CircleCommand } from '../types';
-import { LoaderIcon, PauseIcon, ErrorIcon } from './icons';
+import { LoaderIcon, PauseIcon } from './icons';
 
 interface CanvasProps {
   steps: WhiteboardStep[];
@@ -215,7 +215,7 @@ const drawAnimatedCircle = (ctx: CanvasRenderingContext2D, command: Extract<Draw
 };
 
 const drawAnimatedPath = (ctx: CanvasRenderingContext2D, points: Point[], origin: Point, progress: number) => {
-    if (!points || !Array.isArray(points) || points.length < 2) return;
+    if (points.length < 2) return;
 
     const totalSegments = points.length - 1;
     const segmentsToDraw = totalSegments * progress;
@@ -257,7 +257,6 @@ const drawAnimatedPath = (ctx: CanvasRenderingContext2D, points: Point[], origin
 };
 
 const drawAnimatedStrikethrough = (ctx: CanvasRenderingContext2D, annotation: StrikethroughAnnotation, origin: Point, progress: number) => {
-    if (!annotation.points) return;
     const originalStroke = ctx.strokeStyle;
     const originalWidth = ctx.lineWidth;
     ctx.strokeStyle = annotation.color || '#ef4444';
@@ -360,7 +359,7 @@ const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, pro
              break;
         case 'path':
         case 'strikethrough':
-            if (!item.points || !Array.isArray(item.points) || item.points.length < 2) break;
+            if (item.points.length < 2) break;
             const totalSegments = item.points.length - 1;
             const segmentsToDraw = totalSegments * progress;
             const lastFullSegmentIndex = Math.min(Math.floor(segmentsToDraw), totalSegments - 1);
@@ -710,12 +709,6 @@ export const Canvas: React.FC<CanvasProps> = ({
             role="img"
             aria-label={explanation}
         />
-        {status === 'ERROR' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/70 pointer-events-none text-center p-8">
-                <ErrorIcon className="w-12 h-12 text-red-400 mb-4" />
-                <p className="text-red-300 max-w-md">{explanation}</p>
-            </div>
-        )}
         {showLoader && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
                 <LoaderIcon className="w-12 h-12 text-cyan-400 animate-spin" />
