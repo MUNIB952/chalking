@@ -1,7 +1,9 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
+import OpenAI from 'openai';
 import { AIResponse } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const openai = new OpenAI({ apiKey: process.env.API_KEY, dangerouslyAllowBrowser: true });
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {
@@ -252,23 +254,66 @@ Your response will be rejected if it violates ANY of these rules. These are comm
 *   **VIOLATING SPACING RULE:** Failure to use a large \`origin\` offset (e.g., \`x: 2000\` or \`y: 2000\`) between conceptually different diagrams is a critical failure and will render the output useless. A response where multiple, distinct diagrams all have an origin of \`{x:0, y:0}\` is a failure.
 
 **Schema Adherence (MANDATORY)**
-You must respond with a single, valid JSON object that strictly adheres to the provided schema. Do not include any extra text, explanations, or markdown formatting outside of the JSON object. The JSON should start with \`\`\`json and end with \`\`\`.
+You must respond with a single, valid JSON object that strictly adheres to the schema below:
+
+{
+  "explanation": "string - high-level summary",
+  "whiteboard": [
+    {
+      "origin": {"x": number, "y": number},
+      "explanation": "string - script for this step",
+      "drawingPlan": [
+        {
+          "type": "rectangle|circle|path",
+          "center": {"x": number, "y": number},
+          "width": number (for rectangle),
+          "height": number (for rectangle),
+          "radius": number (for circle),
+          "points": [{"x": number, "y": number}] (for path),
+          "color": "string (optional hex color)",
+          "id": "string (optional)",
+          "isFilled": boolean (optional)
+        }
+      ],
+      "annotations": [
+        {
+          "type": "arrow|text|strikethrough",
+          "start": {"x": number, "y": number} (for arrow),
+          "end": {"x": number, "y": number} (for arrow),
+          "controlPoint": {"x": number, "y": number} (optional for arrow),
+          "text": "string" (for text),
+          "point": {"x": number, "y": number} (for text),
+          "fontSize": number (for text),
+          "isContextual": boolean (optional for text),
+          "points": [{"x": number, "y": number}] (for strikethrough),
+          "color": "string (optional hex color)",
+          "id": "string (optional)"
+        }
+      ],
+      "highlightIds": ["string"],
+      "retainedLabelIds": ["string"]
+    }
+  ]
+}
+
+Return ONLY the JSON, wrapped in markdown json code fence.
 `;
 
     const userRequest = `A user has asked: "${prompt}"`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-pro',
-      contents: userRequest,
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: 'application/json',
-        responseSchema: planSchema,
-      },
+    const response = await openai.chat.completions.create({
+      model: 'gpt-4o',
+      messages: [
+        { role: 'system', content: systemInstruction },
+        { role: 'user', content: userRequest }
+      ],
+      response_format: { type: 'json_object' },
+      temperature: 0.7,
     });
-    
+
+    const content = response.choices[0].message.content || '{}';
     // Use the robust parser on the response text.
-    return robustJsonParse(response.text);
+    return robustJsonParse(content);
   } catch (e) {
     console.error(e);
     if (e instanceof Error && e.message.includes('quota')) {
