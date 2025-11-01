@@ -3,7 +3,12 @@ import OpenAI from 'openai';
 import { AIResponse } from '../types';
 
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-const openai = new OpenAI({ apiKey: process.env.API_KEY, dangerouslyAllowBrowser: true });
+// Tegther AI client configured for Qwen model
+const tegther = new OpenAI({
+  apiKey: process.env.API_KEY,
+  baseURL: 'https://api.together.xyz/v1',
+  dangerouslyAllowBrowser: true
+});
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {
@@ -301,14 +306,21 @@ Return ONLY the JSON, wrapped in markdown json code fence.
 
     const userRequest = `A user has asked: "${prompt}"`;
 
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o',
+    const response = await tegther.chat.completions.create({
+      model: 'Qwen/Qwen2.5-72B-Instruct-Turbo',
       messages: [
         { role: 'system', content: systemInstruction },
         { role: 'user', content: userRequest }
       ],
       response_format: { type: 'json_object' },
-      temperature: 0.7,
+      temperature: 0.9,
+      max_tokens: 32000,
+      top_p: 0.95,
+      frequency_penalty: 0,
+      presence_penalty: 0,
+      // @ts-ignore - Together AI specific parameters for high reasoning effort
+      safety_model: '',
+      repetition_penalty: 1.0,
     });
 
     const content = response.choices[0].message.content || '{}';
