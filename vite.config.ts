@@ -16,8 +16,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.TOGETHER_API_KEY': JSON.stringify(env.TOGETHER_API_KEY),
-        'process.env.CARTESIA_API_KEY': JSON.stringify(env.CARTESIA_API_KEY)
+        'process.env.TOGETHER_API_KEY': JSON.stringify(env.TOGETHER_API_KEY)
       },
       resolve: {
         alias: {

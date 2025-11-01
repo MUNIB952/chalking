@@ -1,17 +1,11 @@
 
 
 import Together from 'together-ai';
-import { Cartesia } from '@cartesia/cartesia-js';
 import { AIResponse } from '../types';
 
 // Initialize Together AI client
 const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY
-});
-
-// Initialize Cartesia client
-const cartesia = new Cartesia({
-  apiKey: process.env.CARTESIA_API_KEY
 });
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
@@ -202,20 +196,26 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
   try {
-    // Using Cartesia's Sonic-2 model with sweet lady voice
-    const response = await cartesia.tts.bytes({
-      model_id: 'sonic-2',
-      transcript: text,
-      voice: {
-        mode: 'id',
-        id: 'a0e99841-438c-4a64-b679-ae501e7d6091' // Sweet Lady voice ID
+    // Using Cartesia's Sonic-2 model hosted on Together AI with sweet lady voice
+    const response = await fetch('https://api.together.xyz/v1/audio/speech', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
+        'Content-Type': 'application/json',
       },
-      output_format: {
-        container: 'raw',
-        encoding: 'pcm_s16le',
+      body: JSON.stringify({
+        model: 'cartesia/sonic-2',
+        voice: 'a0e99841-438c-4a64-b679-ae501e7d6091', // Sweet Lady voice ID
+        input: text,
+        response_format: 'pcm',
         sample_rate: 24000
-      }
+      })
     });
+
+    if (!response.ok) {
+      console.error("Speech generation failed with status:", response.status);
+      return null;
+    }
 
     // Convert the audio bytes to base64
     const audioBuffer = await response.arrayBuffer();
