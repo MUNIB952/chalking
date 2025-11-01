@@ -290,15 +290,64 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
-  console.log('Voice generation: Disabled (format incompatibility)');
-  console.log('Explanation will play without voice narration');
+  try {
+    console.log('Generating speech for text:', text.substring(0, 100) + '...');
 
-  // TODO: Voice generation disabled due to format incompatibility
-  // The Together AI endpoint returns WAV format, but the app needs raw PCM
-  // Options to fix:
-  // 1. Get a direct Cartesia API key and use their HTTP API
-  // 2. Convert WAV to PCM in the browser (complex)
-  // 3. Use Web Audio API to decode WAV (might work)
+    // Call Together AI's Cartesia endpoint
+    const response = await fetch('https://api.together.xyz/v1/audio/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'cartesia/sonic-2',
+        voice: 'helpful woman',
+        input: text
+      })
+    });
 
-  return null; // Animation will play without voice
+    if (!response.ok) {
+      console.error("Voice API failed:", response.status);
+      return null;
+    }
+
+    // Get WAV audio
+    const wavArrayBuffer = await response.arrayBuffer();
+    console.log('Received WAV audio:', wavArrayBuffer.byteLength, 'bytes');
+
+    // Use Web Audio API to decode WAV and extract PCM
+    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const audioBuffer = await audioContext.decodeAudioData(wavArrayBuffer);
+
+    console.log('Decoded audio:', audioBuffer.length, 'samples,', audioBuffer.sampleRate, 'Hz');
+
+    // Extract PCM data from AudioBuffer
+    const pcmData = audioBuffer.getChannelData(0); // Get first channel (mono)
+
+    // Convert Float32 to Int16 (PCM format expected by app)
+    const int16Data = new Int16Array(pcmData.length);
+    for (let i = 0; i < pcmData.length; i++) {
+      // Clamp and convert float32 [-1, 1] to int16 [-32768, 32767]
+      const s = Math.max(-1, Math.min(1, pcmData[i]));
+      int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    }
+
+    // Convert Int16Array to Uint8Array for base64 encoding
+    const uint8Data = new Uint8Array(int16Data.buffer);
+
+    // Convert to base64
+    let binary = '';
+    for (let i = 0; i < uint8Data.length; i++) {
+      binary += String.fromCharCode(uint8Data[i]);
+    }
+    const base64Audio = btoa(binary);
+
+    console.log('Generated PCM base64 audio length:', base64Audio.length);
+    return base64Audio;
+
+  } catch (e) {
+    console.error("Speech generation failed:", e);
+    return null;
+  }
 };
