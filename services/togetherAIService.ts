@@ -12,25 +12,44 @@ const together = new Together({
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {
-    // First, try to find a JSON block wrapped in ```json ... ```
-    let jsonString = str;
-    const match = str.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
-    if (match && match[1]) {
-        jsonString = match[1];
+    // Try direct parsing first
+    try {
+        return JSON.parse(str);
+    } catch (e) {
+        // Continue with advanced parsing
     }
 
-    // Find the first opening brace or bracket to start searching from.
-    const startIndex = jsonString.search(/[[{]/);
+    let jsonString = str;
+
+    // Remove thinking tags if present (QWEN reasoning models)
+    jsonString = jsonString.replace(/<think>[\s\S]*?<\/think>/g, '');
+    jsonString = jsonString.replace(/<thinking>[\s\S]*?<\/thinking>/g, '');
+
+    // Try to find a JSON block wrapped in ```json ... ``` or ``` ... ```
+    const codeBlockMatch = jsonString.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+        jsonString = codeBlockMatch[1];
+        try {
+            return JSON.parse(jsonString);
+        } catch (e) {
+            // Continue with further parsing
+        }
+    }
+
+    // Find the first opening brace for an object
+    const startIndex = jsonString.search(/\{/);
     if (startIndex === -1) {
-        throw new Error('No JSON object or array found in the response.');
+        console.error('Could not find opening brace in response');
+        throw new Error('No JSON object found in the response.');
     }
 
     // Work backwards from the end of the string to find the last valid, parsable JSON structure.
     for (let i = jsonString.length; i > startIndex; i--) {
         const potentialJson = jsonString.substring(startIndex, i);
-        if (potentialJson.endsWith('}') || potentialJson.endsWith(']')) {
+        if (potentialJson.endsWith('}')) {
             try {
                 const result = JSON.parse(potentialJson);
+                console.log('Successfully parsed JSON from position', startIndex, 'to', i);
                 return result;
             } catch (e) {
                 // Continue trimming.
@@ -38,6 +57,7 @@ function robustJsonParse(str: string): any {
         }
     }
 
+    console.error('Failed to parse JSON. First 200 chars of cleaned string:', jsonString.substring(0, 200));
     throw new Error('Failed to parse any valid JSON from the AI response.');
 }
 
@@ -179,6 +199,9 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
     const responseText = response.choices[0]?.message?.content || '{}';
 
     console.log('API Response received, parsing JSON...');
+    console.log('Raw response length:', responseText.length);
+    console.log('First 500 chars:', responseText.substring(0, 500));
+    console.log('Last 500 chars:', responseText.substring(responseText.length - 500));
 
     // Use the robust parser on the response text.
     return robustJsonParse(responseText);
