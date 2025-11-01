@@ -1,14 +1,16 @@
 
 
-import Together from 'together-ai';
+import { GoogleGenAI } from "@google/genai";
+import { createClient } from "@deepgram/sdk";
 import { AIResponse } from '../types';
 
-// Initialize Together AI client with extended timeout for reasoning models
-const together = new Together({
-  apiKey: process.env.TOGETHER_API_KEY,
-  timeout: 600000, // 10 minutes timeout for QWEN reasoning model
-  maxRetries: 2
+// Initialize Gemini AI client
+const gemini = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY
 });
+
+// Initialize Deepgram client for voice generation
+const deepgram = createClient(process.env.GEMINI_API_KEY); // Using same Gemini API key
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {
@@ -249,21 +251,19 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       6. Your response should START with { and END with }
       `;
 
-    const response = await together.chat.completions.create({
-      model: 'Qwen/Qwen3-235B-A22B-Thinking-2507',
-      messages: [
-        {
-          role: 'user',
-          content: fullPrompt
-        }
-      ],
-      max_tokens: 30000,
-      temperature: 0.7
+    const response = await gemini.models.generateContent({
+      model: 'gemini-2.5-pro',
+      contents: fullPrompt,
+      config: {
+        maxOutputTokens: 60000,
+        temperature: 0.7,
+        responseMimeType: 'application/json'
+      }
     });
 
-    const responseText = response.choices[0]?.message?.content || '{}';
+    const responseText = response.text || '{}';
 
-    console.log('API Response received, parsing JSON...');
+    console.log('Gemini API Response received, parsing JSON...');
     console.log('Raw response length:', responseText.length);
     console.log('First 500 chars:', responseText.substring(0, 500));
     console.log('Last 500 chars:', responseText.substring(responseText.length - 500));
@@ -291,38 +291,36 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
   try {
-    console.log('Generating speech for text:', text.substring(0, 100) + '...');
+    console.log('Generating speech with Deepgram for text:', text.substring(0, 100) + '...');
 
-    // Call Together AI's Cartesia endpoint
-    const response = await fetch('https://api.together.xyz/v1/audio/generations', {
+    // Use Deepgram TTS API
+    const response = await fetch('https://api.deepgram.com/v1/speak?model=aura-asteria-en', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
+        'Authorization': `Token ${process.env.GEMINI_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'cartesia/sonic-2',
-        voice: 'helpful woman',
-        input: text
+        text: text
       })
     });
 
     if (!response.ok) {
-      console.error("Voice API failed:", response.status);
+      console.error("Deepgram TTS failed:", response.status);
       return null;
     }
 
-    // Get WAV audio
-    const wavArrayBuffer = await response.arrayBuffer();
-    console.log('Received WAV audio:', wavArrayBuffer.byteLength, 'bytes');
+    // Get audio (Deepgram returns various formats, typically MP3 or WAV)
+    const audioArrayBuffer = await response.arrayBuffer();
+    console.log('Received Deepgram audio:', audioArrayBuffer.byteLength, 'bytes');
 
-    // Use Web Audio API to decode WAV and extract PCM
+    // Use Web Audio API to decode audio and extract PCM
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const audioBuffer = await audioContext.decodeAudioData(wavArrayBuffer);
+    const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
 
     console.log('Decoded audio:', audioBuffer.length, 'samples,', audioBuffer.sampleRate, 'Hz');
 
-    // CRITICAL: Resample from 48kHz to 24kHz to match app's expectation
+    // CRITICAL: Resample to 24kHz to match app's expectation
     const TARGET_SAMPLE_RATE = 24000;
     let pcmData: Float32Array;
 
@@ -369,7 +367,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
     return base64Audio;
 
   } catch (e) {
-    console.error("Speech generation failed:", e);
+    console.error("Deepgram speech generation failed:", e);
     return null;
   }
 };

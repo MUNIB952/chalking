@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { Controls } from './components/Controls';
-import { getInitialPlan, generateSpeech } from './services/togetherAIService';
+import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { MailIcon, GithubIcon } from './components/icons';
 

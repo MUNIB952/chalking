@@ -9,6 +9,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@deepgram/sdk": "^4.11.2",
+    "@google/genai": "^1.28.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "together-ai": "^0.29.0"

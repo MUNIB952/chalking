@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - GitHub repository connected to Vercel
-- Together AI API key from https://api.together.xyz/settings/api-keys
+- Gemini API key from https://aistudio.google.com/apikey
 
 ## Environment Variables Setup on Vercel
 
@@ -12,13 +12,13 @@
 Go to your Vercel project settings and add the following environment variable:
 
 ```
-TOGETHER_API_KEY=your_actual_together_ai_api_key
+GEMINI_API_KEY=your_actual_gemini_api_key
 ```
 
 **Important:**
-- Variable name must be exactly: `TOGETHER_API_KEY`
+- Variable name must be exactly: `GEMINI_API_KEY`
 - Apply to: Production, Preview, and Development
-- This single key provides access to both QWEN text model and Cartesia Sonic-2 voice
+- This key provides access to Gemini 2.5 Pro (text generation) and Deepgram (voice)
 
 ### Steps to Add Environment Variable:
 
@@ -27,8 +27,8 @@ TOGETHER_API_KEY=your_actual_together_ai_api_key
 3. Click "Settings" tab
 4. Click "Environment Variables" in the sidebar
 5. Add new variable:
-   - **Key**: `TOGETHER_API_KEY`
-   - **Value**: Your Together AI API key
+   - **Key**: `GEMINI_API_KEY`
+   - **Value**: Your Gemini API key
    - **Environment**: Check all (Production, Preview, Development)
 6. Click "Save"
 
@@ -72,7 +72,7 @@ After deployment:
 ### Common Issues
 
 **Issue**: "API key not defined" error
-- **Solution**: Make sure `TOGETHER_API_KEY` is set in Vercel environment variables
+- **Solution**: Make sure `GEMINI_API_KEY` is set in Vercel environment variables
 - **Solution**: Redeploy after adding the environment variable
 
 **Issue**: Build fails
@@ -81,12 +81,12 @@ After deployment:
 
 **Issue**: API calls fail in production
 - **Solution**: Check browser console for detailed error messages
-- **Solution**: Verify API key is valid at https://api.together.xyz
+- **Solution**: Verify API key is valid at https://aistudio.google.com/apikey
 
 ## Models Used
 
-- **Text Generation**: `Qwen/Qwen3-235B-A22B-Thinking-2507` (20k max tokens)
-- **Voice Generation**: `cartesia/sonic-2` with "helpful woman" voice
+- **Text Generation**: `gemini-2.5-pro` (60k max tokens, high thinking capability)
+- **Voice Generation**: Deepgram Aura Asteria (natural female voice)
 
 ## Support
 
@@ -95,4 +95,4 @@ If you encounter issues:
 1. Check Vercel build logs
 2. Check browser console for errors
 3. Verify environment variables are set correctly
-4. Ensure Together AI API key is valid and has credits
+4. Ensure Gemini API key is valid and has quota available
