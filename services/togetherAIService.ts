@@ -36,29 +36,47 @@ function robustJsonParse(str: string): any {
         }
     }
 
-    // Find the first opening brace for an object
-    const startIndex = jsonString.search(/\{/);
-    if (startIndex === -1) {
-        console.error('Could not find opening brace in response');
+    // QWEN includes thinking text before JSON, so we need to find the LAST complete JSON object
+    // Strategy: Find the last closing brace, then work backwards to find its matching opening brace
+
+    const lastCloseBrace = jsonString.lastIndexOf('}');
+    if (lastCloseBrace === -1) {
+        console.error('Could not find closing brace in response');
         throw new Error('No JSON object found in the response.');
     }
 
-    // Work backwards from the end of the string to find the last valid, parsable JSON structure.
-    for (let i = jsonString.length; i > startIndex; i--) {
-        const potentialJson = jsonString.substring(startIndex, i);
-        if (potentialJson.endsWith('}')) {
-            try {
-                const result = JSON.parse(potentialJson);
-                console.log('Successfully parsed JSON from position', startIndex, 'to', i);
-                return result;
-            } catch (e) {
-                // Continue trimming.
+    // Work backwards from the last } to find the matching {
+    let braceCount = 0;
+    let startIndex = -1;
+
+    for (let i = lastCloseBrace; i >= 0; i--) {
+        if (jsonString[i] === '}') {
+            braceCount++;
+        } else if (jsonString[i] === '{') {
+            braceCount--;
+            if (braceCount === 0) {
+                startIndex = i;
+                break;
             }
         }
     }
 
-    console.error('Failed to parse JSON. First 200 chars of cleaned string:', jsonString.substring(0, 200));
-    throw new Error('Failed to parse any valid JSON from the AI response.');
+    if (startIndex === -1) {
+        console.error('Could not find matching opening brace');
+        throw new Error('Malformed JSON in the response.');
+    }
+
+    const potentialJson = jsonString.substring(startIndex, lastCloseBrace + 1);
+
+    try {
+        const result = JSON.parse(potentialJson);
+        console.log('Successfully parsed JSON from position', startIndex, 'to', lastCloseBrace + 1);
+        return result;
+    } catch (e) {
+        console.error('Failed to parse extracted JSON:', e);
+        console.error('Extracted string (first 200 chars):', potentialJson.substring(0, 200));
+        throw new Error('Failed to parse any valid JSON from the AI response.');
+    }
 }
 
 const QUOTA_ERROR_MESSAGE = "You've exceeded your API quota. To continue using the app, please check your plan and billing details.";
