@@ -314,7 +314,7 @@ Return ONLY the JSON, wrapped in markdown json code fence.
       ],
       response_format: { type: 'json_object' },
       temperature: 0.9,
-      max_tokens: 32000,
+      max_tokens: 30000,
       top_p: 0.95,
       frequency_penalty: 0,
       presence_penalty: 0,
