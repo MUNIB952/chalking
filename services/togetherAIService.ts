@@ -163,32 +163,36 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       `;
 
     const response = await together.chat.completions.create({
-      model: 'Qwen/QwQ-32B-Preview',
+      model: 'Qwen/Qwen3-235B-A22B-Thinking-2507',
       messages: [
         {
-          role: 'system',
-          content: 'You are Visu, an expert AI teacher. You MUST respond with valid JSON only. No markdown, no extra text, just pure JSON matching the required schema.'
-        },
-        {
           role: 'user',
-          content: fullPrompt
+          content: fullPrompt + '\n\nIMPORTANT: Respond with valid JSON only. No markdown, no extra text, just pure JSON.'
         }
       ],
       max_tokens: 20000,
-      temperature: 0.7,
-      response_format: { type: 'json_object' }
+      temperature: 0.7
     });
 
     const responseText = response.choices[0]?.message?.content || '{}';
 
+    console.log('API Response received, parsing JSON...');
+
     // Use the robust parser on the response text.
     return robustJsonParse(responseText);
   } catch (e) {
-    console.error(e);
+    console.error('Error in getInitialPlan:', e);
+
+    // Log more details about the error
+    if (e instanceof Error) {
+      console.error('Error message:', e.message);
+      console.error('Error stack:', e.stack);
+    }
+
     if (e instanceof Error && (e.message.includes('quota') || e.message.includes('rate limit'))) {
         throw new Error(QUOTA_ERROR_MESSAGE);
     }
-    throw new Error('Could not generate a plan from the prompt.');
+    throw new Error('Could not generate a plan from the prompt. Check console for details.');
   }
 };
 
@@ -196,8 +200,9 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
   try {
-    // Using Cartesia's Sonic-2 model hosted on Together AI with sweet lady voice
-    const response = await fetch('https://api.together.xyz/v1/audio/speech', {
+    // Using Cartesia's Sonic-2 model hosted on Together AI
+    // Using fetch API directly since we need to handle the stream in browser
+    const response = await fetch('https://api.together.xyz/v1/audio/generations', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
@@ -205,15 +210,14 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
       },
       body: JSON.stringify({
         model: 'cartesia/sonic-2',
-        voice: 'a0e99841-438c-4a64-b679-ae501e7d6091', // Sweet Lady voice ID
-        input: text,
-        response_format: 'pcm',
-        sample_rate: 24000
+        voice: 'helpful woman', // Sweet, professional female voice
+        input: text
       })
     });
 
     if (!response.ok) {
-      console.error("Speech generation failed with status:", response.status);
+      const errorText = await response.text();
+      console.error("Speech generation failed with status:", response.status, errorText);
       return null;
     }
 
