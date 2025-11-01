@@ -1,11 +1,10 @@
 
 
 
-
 import React, { useState, useEffect } from 'react';
 import { EXAMPLE_PROMPTS } from '../constants';
-import { AppStatus, WhiteboardStep, AIResponse } from '../types';
-import { SendIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, PlayIcon, PauseIcon, DownloadIcon } from './icons';
+import { AppStatus, WhiteboardStep } from '../types';
+import { SendIcon, ChevronDownIcon, ChevronUpIcon, RepeatIcon, PlayIcon, PauseIcon } from './icons';
 
 interface ControlsProps {
   status: AppStatus;
@@ -14,7 +13,6 @@ interface ControlsProps {
   steps: WhiteboardStep[];
   currentStepIndex: number;
   isPaused: boolean;
-  rawAIResponse: AIResponse | null;
   onSubmit: (prompt: string) => void;
   onRepeat: () => void;
   onTogglePause: () => void;
@@ -49,7 +47,6 @@ export const Controls: React.FC<ControlsProps> = ({
   steps,
   currentStepIndex,
   isPaused,
-  rawAIResponse,
   onSubmit,
   onRepeat,
   onTogglePause,
@@ -73,26 +70,11 @@ export const Controls: React.FC<ControlsProps> = ({
     setPrompt(examplePrompt);
     onSubmit(examplePrompt);
   };
-
-  const handleDownload = () => {
-    if (!rawAIResponse) return;
-    const jsonString = JSON.stringify(rawAIResponse, null, 2);
-    const blob = new Blob([jsonString], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'ai_drawing_plan.txt';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
   
   const progressPercentage = steps.length > 0 ? (status === 'DONE' ? 100 : ((currentStepIndex + 1) / steps.length) * 100) : 0;
   
   const pauseControlDisabled = status !== 'DRAWING';
   const repeatControlDisabled = !(status === 'DONE' || (status === 'DRAWING' && isPaused));
-  const downloadControlDisabled = !rawAIResponse || status === 'THINKING' || status === 'PREPARING';
 
 
   return (
@@ -141,15 +123,6 @@ export const Controls: React.FC<ControlsProps> = ({
               title="Repeat explanation"
             >
               <RepeatIcon className="w-5 h-5" />
-            </button>
-            <button
-              onClick={handleDownload}
-              disabled={downloadControlDisabled}
-              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              aria-label="Download AI Plan"
-              title="Download AI Plan"
-            >
-              <DownloadIcon className="w-5 h-5" />
             </button>
             <button 
               onClick={() => setIsVisible(!isVisible)}

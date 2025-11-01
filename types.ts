@@ -1,6 +1,4 @@
 
-
-
 export type AppStatus = 'IDLE' | 'THINKING' | 'PREPARING' | 'DRAWING' | 'DONE' | 'ERROR';
 
 export type AbsolutePoint = {

@@ -1,7 +1,5 @@
 
 
-
-
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { Controls } from './components/Controls';
@@ -68,7 +66,6 @@ const App: React.FC = () => {
   const [explanation, setExplanation] = useState<string>('Enter a prompt and I\'ll create a voice-led visual explanation for you.');
   const [error, setError] = useState<string | null>(null);
   const [whiteboardSteps, setWhiteboardSteps] = useState<WhiteboardStep[]>([]);
-  const [rawAIResponse, setRawAIResponse] = useState<AIResponse | null>(null);
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [canvasKey, setCanvasKey] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
@@ -144,7 +141,6 @@ const App: React.FC = () => {
     setStatus('THINKING');
     setError(null);
     setWhiteboardSteps([]);
-    setRawAIResponse(null);
     setCurrentStepIndex(0);
     audioBuffersRef.current = [];
     setCanvasKey(prev => prev + 1);
@@ -158,7 +154,6 @@ const App: React.FC = () => {
 
     try {
       const response: AIResponse = await getInitialPlan(prompt);
-      setRawAIResponse(response);
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
@@ -355,7 +350,6 @@ const App: React.FC = () => {
             steps={whiteboardSteps}
             currentStepIndex={currentStepIndex}
             isPaused={isPaused}
-            rawAIResponse={rawAIResponse}
             onSubmit={handleSubmit}
             onRepeat={handleRepeat}
             onTogglePause={handleTogglePause}
