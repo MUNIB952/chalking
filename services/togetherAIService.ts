@@ -290,8 +290,9 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
   try {
+    console.log('Generating speech for text:', text.substring(0, 100) + '...');
+
     // Using Cartesia's Sonic-2 model hosted on Together AI
-    // Using fetch API directly since we need to handle the stream in browser
     const response = await fetch('https://api.together.xyz/v1/audio/generations', {
       method: 'POST',
       headers: {
@@ -300,19 +301,33 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
       },
       body: JSON.stringify({
         model: 'cartesia/sonic-2',
-        voice: 'helpful woman', // Sweet, professional female voice
+        voice: 'helpful woman',
         input: text
       })
     });
 
+    console.log('Voice API response status:', response.status);
+    console.log('Voice API response headers:', response.headers.get('content-type'));
+
     if (!response.ok) {
       const errorText = await response.text();
-      console.error("Speech generation failed with status:", response.status, errorText);
+      console.error("Speech generation failed with status:", response.status);
+      console.error("Error response:", errorText);
+      return null;
+    }
+
+    // Check if response is actually audio
+    const contentType = response.headers.get('content-type');
+    if (contentType?.includes('application/json')) {
+      const errorJson = await response.json();
+      console.error("API returned JSON instead of audio:", errorJson);
       return null;
     }
 
     // Convert the audio bytes to base64
     const audioBuffer = await response.arrayBuffer();
+    console.log('Received audio buffer size:', audioBuffer.byteLength);
+
     const uint8Array = new Uint8Array(audioBuffer);
 
     // Convert to base64
@@ -323,6 +338,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
     }
     const base64Audio = btoa(binary);
 
+    console.log('Generated base64 audio length:', base64Audio.length);
     return base64Audio;
 
   } catch (e) {
