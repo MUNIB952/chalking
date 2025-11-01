@@ -322,8 +322,30 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
 
     console.log('Decoded audio:', audioBuffer.length, 'samples,', audioBuffer.sampleRate, 'Hz');
 
-    // Extract PCM data from AudioBuffer
-    const pcmData = audioBuffer.getChannelData(0); // Get first channel (mono)
+    // CRITICAL: Resample from 48kHz to 24kHz to match app's expectation
+    const TARGET_SAMPLE_RATE = 24000;
+    let pcmData: Float32Array;
+
+    if (audioBuffer.sampleRate !== TARGET_SAMPLE_RATE) {
+      console.log(`Resampling from ${audioBuffer.sampleRate}Hz to ${TARGET_SAMPLE_RATE}Hz...`);
+
+      // Create offline context at target sample rate
+      const offlineContext = new OfflineAudioContext(1, audioBuffer.duration * TARGET_SAMPLE_RATE, TARGET_SAMPLE_RATE);
+
+      // Create buffer source
+      const source = offlineContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineContext.destination);
+      source.start(0);
+
+      // Render resampled audio
+      const resampledBuffer = await offlineContext.startRendering();
+      pcmData = resampledBuffer.getChannelData(0);
+
+      console.log('Resampled to:', resampledBuffer.length, 'samples,', resampledBuffer.sampleRate, 'Hz');
+    } else {
+      pcmData = audioBuffer.getChannelData(0);
+    }
 
     // Convert Float32 to Int16 (PCM format expected by app)
     const int16Data = new Int16Array(pcmData.length);
