@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@google/genai": "^1.24.0",
+    "@cartesia/cartesia-js": "^2.2.7",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "together-ai": "^0.29.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
