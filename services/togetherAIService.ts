@@ -257,7 +257,7 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
           content: fullPrompt
         }
       ],
-      max_tokens: 20000,
+      max_tokens: 30000,
       temperature: 0.7
     });
 
