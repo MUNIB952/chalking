@@ -1,7 +1,6 @@
 
 
-import { GoogleGenAI } from "@google/genai";
-import { createClient } from "@deepgram/sdk";
+import { GoogleGenAI, Modality } from "@google/genai";
 import { AIResponse } from '../types';
 
 // Initialize Gemini AI client
@@ -288,83 +287,34 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
   try {
-    console.log('Generating speech with Deepgram for text:', text.substring(0, 100) + '...');
+    console.log('Generating speech with Gemini TTS for text:', text.substring(0, 100) + '...');
 
-    // Use Deepgram TTS API
-    const response = await fetch('https://api.deepgram.com/v1/speak?model=aura-asteria-en', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
-        'Content-Type': 'application/json',
+    // Use Gemini 2.5 Flash TTS - returns raw PCM base64 directly!
+    const response = await gemini.models.generateContent({
+      model: "gemini-2.5-flash-preview-tts",
+      contents: [{ parts: [{ text: text }] }],
+      config: {
+        responseModalities: [Modality.AUDIO],
+        speechConfig: {
+          voiceConfig: {
+            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Natural female voice
+          },
+        },
       },
-      body: JSON.stringify({
-        text: text
-      })
     });
 
-    if (!response.ok) {
-      console.error("Deepgram TTS failed:", response.status);
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+
+    if (!base64Audio) {
+      console.error("Gemini TTS returned no audio data");
       return null;
     }
-
-    // Get audio (Deepgram returns various formats, typically MP3 or WAV)
-    const audioArrayBuffer = await response.arrayBuffer();
-    console.log('Received Deepgram audio:', audioArrayBuffer.byteLength, 'bytes');
-
-    // Use Web Audio API to decode audio and extract PCM
-    const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
-
-    console.log('Decoded audio:', audioBuffer.length, 'samples,', audioBuffer.sampleRate, 'Hz');
-
-    // CRITICAL: Resample to 24kHz to match app's expectation
-    const TARGET_SAMPLE_RATE = 24000;
-    let pcmData: Float32Array;
-
-    if (audioBuffer.sampleRate !== TARGET_SAMPLE_RATE) {
-      console.log(`Resampling from ${audioBuffer.sampleRate}Hz to ${TARGET_SAMPLE_RATE}Hz...`);
-
-      // Create offline context at target sample rate
-      const offlineContext = new OfflineAudioContext(1, audioBuffer.duration * TARGET_SAMPLE_RATE, TARGET_SAMPLE_RATE);
-
-      // Create buffer source
-      const source = offlineContext.createBufferSource();
-      source.buffer = audioBuffer;
-      source.connect(offlineContext.destination);
-      source.start(0);
-
-      // Render resampled audio
-      const resampledBuffer = await offlineContext.startRendering();
-      pcmData = resampledBuffer.getChannelData(0);
-
-      console.log('Resampled to:', resampledBuffer.length, 'samples,', resampledBuffer.sampleRate, 'Hz');
-    } else {
-      pcmData = audioBuffer.getChannelData(0);
-    }
-
-    // Convert Float32 to Int16 (PCM format expected by app)
-    const int16Data = new Int16Array(pcmData.length);
-    for (let i = 0; i < pcmData.length; i++) {
-      // Clamp and convert float32 [-1, 1] to int16 [-32768, 32767]
-      const s = Math.max(-1, Math.min(1, pcmData[i]));
-      int16Data[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-    }
-
-    // Convert Int16Array to Uint8Array for base64 encoding
-    const uint8Data = new Uint8Array(int16Data.buffer);
-
-    // Convert to base64
-    let binary = '';
-    for (let i = 0; i < uint8Data.length; i++) {
-      binary += String.fromCharCode(uint8Data[i]);
-    }
-    const base64Audio = btoa(binary);
 
     console.log('Generated PCM base64 audio length:', base64Audio.length);
     return base64Audio;
 
   } catch (e) {
-    console.error("Deepgram speech generation failed:", e);
+    console.error("Gemini speech generation failed:", e);
     return null;
   }
 };

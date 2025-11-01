@@ -79,10 +79,11 @@ const App: React.FC = () => {
   const stepTimeoutRef = useRef<number | null>(null);
   const statusMessageIntervalRef = useRef<number | null>(null);
   const animationFrameRef = useRef<number | null>(null);
-  
+
   const overallExplanationRef = useRef<string>('');
-  const playbackOffsetRef = useRef<number>(0); 
-  const startedAtRef = useRef<number>(0); 
+  const playbackOffsetRef = useRef<number>(0);
+  const startedAtRef = useRef<number>(0);
+  const audioOffsetRef = useRef<number>(0); // Tracks where in the audio we should be (for pause/resume) 
   
   const [animationProgress, setAnimationProgress] = useState(0);
 
@@ -90,14 +91,15 @@ const App: React.FC = () => {
     if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
     if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
     if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    
+
     if (audioSourceRef.current) {
         try { audioSourceRef.current.stop(); } catch (e) { /* ignore */ }
         audioSourceRef.current = null;
     }
-    
+
     setIsPaused(false);
     playbackOffsetRef.current = 0;
+    audioOffsetRef.current = 0; // Reset audio offset for fresh start
     setAnimationProgress(0);
   }, []);
 
@@ -232,9 +234,27 @@ const App: React.FC = () => {
   
   const handleTogglePause = useCallback(() => {
     if (status === 'DRAWING') {
-      setIsPaused(p => !p);
+      const willBePaused = !isPaused;
+
+      if (willBePaused && audioSourceRef.current && audioContextRef.current) {
+        // Pausing: Calculate current position and stop audio
+        const currentTime = audioContextRef.current.currentTime;
+        const elapsed = currentTime - startedAtRef.current;
+        audioOffsetRef.current += elapsed;
+
+        console.log(`Pausing audio at offset: ${audioOffsetRef.current.toFixed(2)}s`);
+
+        try {
+          audioSourceRef.current.stop();
+        } catch (e) {
+          console.log('Audio source already stopped');
+        }
+        audioSourceRef.current = null;
+      }
+
+      setIsPaused(willBePaused);
     }
-  }, [status]);
+  }, [status, isPaused]);
   
   useEffect(() => {
     playbackOffsetRef.current = 0;
@@ -306,15 +326,19 @@ const App: React.FC = () => {
 
       stepTimeoutRef.current = window.setTimeout(completeAndAdvance, durationMs + 100);
 
-      // Play continuous audio (only start on first step)
-      if (currentStepIndex === 0 && buffer && audioContextRef.current) {
+      // Play continuous audio - start on first step OR resume after pause
+      if (buffer && audioContextRef.current && !audioSourceRef.current) {
         const source = audioContextRef.current.createBufferSource();
         source.buffer = buffer;
         source.connect(audioContextRef.current.destination);
-        source.start(0); // Play from beginning
+
+        // Resume from stored offset (for pause/resume functionality)
+        const startOffset = audioOffsetRef.current;
+        source.start(0, startOffset); // Start from the stored offset
         audioSourceRef.current = source;
         startedAtRef.current = audioContextRef.current.currentTime;
-        console.log('Started continuous audio playback');
+
+        console.log(`${startOffset > 0 ? 'Resumed' : 'Started'} audio playback at offset: ${startOffset.toFixed(2)}s`);
       }
     };
     
