@@ -9,9 +9,6 @@ const gemini = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY
 });
 
-// Initialize Deepgram client for voice generation
-const deepgram = createClient(process.env.GEMINI_API_KEY); // Using same Gemini API key
-
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {
     // Try direct parsing first
@@ -297,7 +294,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
     const response = await fetch('https://api.deepgram.com/v1/speak?model=aura-asteria-en', {
       method: 'POST',
       headers: {
-        'Authorization': `Token ${process.env.GEMINI_API_KEY}`,
+        'Authorization': `Token ${process.env.DEEPGRAM_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({

@@ -12,6 +12,7 @@ export default defineConfig(({ mode }) => {
 
     // On Vercel, use process.env directly, otherwise use loadEnv
     const GEMINI_API_KEY = process.env.GEMINI_API_KEY || env.GEMINI_API_KEY;
+    const DEEPGRAM_API_KEY = process.env.DEEPGRAM_API_KEY || env.DEEPGRAM_API_KEY;
 
     return {
       server: {
@@ -20,7 +21,8 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.GEMINI_API_KEY': JSON.stringify(GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(GEMINI_API_KEY),
+        'process.env.DEEPGRAM_API_KEY': JSON.stringify(DEEPGRAM_API_KEY)
       },
       resolve: {
         alias: {

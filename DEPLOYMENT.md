@@ -4,33 +4,41 @@
 
 - GitHub repository connected to Vercel
 - Gemini API key from https://aistudio.google.com/apikey
+- Deepgram API key from https://console.deepgram.com/
 
 ## Environment Variables Setup on Vercel
 
-### Required Environment Variable
+### Required Environment Variables
 
-Go to your Vercel project settings and add the following environment variable:
+Go to your Vercel project settings and add the following environment variables:
 
 ```
 GEMINI_API_KEY=your_actual_gemini_api_key
+DEEPGRAM_API_KEY=your_actual_deepgram_api_key
 ```
 
 **Important:**
-- Variable name must be exactly: `GEMINI_API_KEY`
+- Variable names must be exactly: `GEMINI_API_KEY` and `DEEPGRAM_API_KEY`
 - Apply to: Production, Preview, and Development
-- This key provides access to Gemini 2.5 Pro (text generation) and Deepgram (voice)
+- GEMINI_API_KEY: Used for text generation with Gemini 2.5 Pro
+- DEEPGRAM_API_KEY: Used for voice generation with Deepgram TTS
 
-### Steps to Add Environment Variable:
+### Steps to Add Environment Variables:
 
 1. Go to https://vercel.com/dashboard
 2. Select your project
 3. Click "Settings" tab
 4. Click "Environment Variables" in the sidebar
-5. Add new variable:
+5. Add first variable:
    - **Key**: `GEMINI_API_KEY`
    - **Value**: Your Gemini API key
    - **Environment**: Check all (Production, Preview, Development)
 6. Click "Save"
+7. Add second variable:
+   - **Key**: `DEEPGRAM_API_KEY`
+   - **Value**: Your Deepgram API key
+   - **Environment**: Check all (Production, Preview, Development)
+8. Click "Save"
 
 ## Deployment Process
 
