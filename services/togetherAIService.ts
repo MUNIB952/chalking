@@ -1,6 +1,7 @@
 
 
 import Together from 'together-ai';
+import { Cartesia } from '@cartesia/cartesia-js';
 import { AIResponse } from '../types';
 
 // Initialize Together AI client with extended timeout for reasoning models
@@ -8,6 +9,11 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
   timeout: 600000, // 10 minutes timeout for QWEN reasoning model
   maxRetries: 2
+});
+
+// Initialize Cartesia client for voice generation
+const cartesia = new Cartesia({
+  apiKey: process.env.TOGETHER_API_KEY // Cartesia hosted on Together AI
 });
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
@@ -292,56 +298,34 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
   try {
     console.log('Generating speech for text:', text.substring(0, 100) + '...');
 
-    // Using Cartesia's Sonic-2 model hosted on Together AI
-    const response = await fetch('https://api.together.xyz/v1/audio/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.TOGETHER_API_KEY}`,
-        'Content-Type': 'application/json',
+    // Use Cartesia SDK which returns raw PCM in the format the app expects
+    const response = await cartesia.tts.bytes({
+      model_id: 'sonic-english',
+      transcript: text,
+      voice: {
+        mode: 'id',
+        id: 'a0e99841-438c-4a64-b679-ae501e7d6091' // Sweet Lady voice
       },
-      body: JSON.stringify({
-        model: 'cartesia/sonic-2',
-        voice: 'helpful woman',
-        input: text
-      })
+      output_format: {
+        container: 'raw',
+        encoding: 'pcm_s16le',
+        sample_rate: 24000
+      }
     });
 
-    console.log('Voice API response status:', response.status);
-    console.log('Voice API response headers:', response.headers.get('content-type'));
+    console.log('Cartesia SDK returned response');
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Speech generation failed with status:", response.status);
-      console.error("Error response:", errorText);
-      return null;
-    }
-
-    // Check if response is actually audio
-    const contentType = response.headers.get('content-type');
-    if (contentType?.includes('application/json')) {
-      const errorJson = await response.json();
-      console.error("API returned JSON instead of audio:", errorJson);
-      return null;
-    }
-
-    // Convert the audio bytes to base64
+    // Convert response to ArrayBuffer
     const audioBuffer = await response.arrayBuffer();
-    console.log('Received audio buffer size:', audioBuffer.byteLength);
+    console.log('Received raw PCM audio buffer size:', audioBuffer.byteLength);
 
-    // WAV files have a 44-byte header that we need to strip
-    // The app expects raw PCM audio data, not WAV format
-    const WAV_HEADER_SIZE = 44;
     const uint8Array = new Uint8Array(audioBuffer);
 
-    // Strip the WAV header to get raw PCM data
-    const pcmData = uint8Array.slice(WAV_HEADER_SIZE);
-    console.log('PCM data size after stripping WAV header:', pcmData.byteLength);
-
-    // Convert raw PCM to base64
+    // Convert to base64
     let binary = '';
-    const len = pcmData.byteLength;
+    const len = uint8Array.byteLength;
     for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(pcmData[i]);
+      binary += String.fromCharCode(uint8Array[i]);
     }
     const base64Audio = btoa(binary);
 
