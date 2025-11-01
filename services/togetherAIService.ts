@@ -328,13 +328,20 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
     const audioBuffer = await response.arrayBuffer();
     console.log('Received audio buffer size:', audioBuffer.byteLength);
 
+    // WAV files have a 44-byte header that we need to strip
+    // The app expects raw PCM audio data, not WAV format
+    const WAV_HEADER_SIZE = 44;
     const uint8Array = new Uint8Array(audioBuffer);
 
-    // Convert to base64
+    // Strip the WAV header to get raw PCM data
+    const pcmData = uint8Array.slice(WAV_HEADER_SIZE);
+    console.log('PCM data size after stripping WAV header:', pcmData.byteLength);
+
+    // Convert raw PCM to base64
     let binary = '';
-    const len = uint8Array.byteLength;
+    const len = pcmData.byteLength;
     for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
+      binary += String.fromCharCode(pcmData[i]);
     }
     const base64Audio = btoa(binary);
 
