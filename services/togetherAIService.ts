@@ -3,9 +3,11 @@
 import Together from 'together-ai';
 import { AIResponse } from '../types';
 
-// Initialize Together AI client
+// Initialize Together AI client with extended timeout for reasoning models
 const together = new Together({
-  apiKey: process.env.TOGETHER_API_KEY
+  apiKey: process.env.TOGETHER_API_KEY,
+  timeout: 600000, // 10 minutes timeout for QWEN reasoning model
+  maxRetries: 2
 });
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
