@@ -175,13 +175,60 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       2.  **Audience and Tone (Explain Like I'm 10):** Your audience has **ZERO** prior knowledge. Aggressively replace all jargon with simple, everyday language.
       3.  **Be Granular:** Break down the explanation into many small, simple steps (8-15 is typical).
 
-      **Schema Adherence (MANDATORY)**
-      You must respond with a single, valid JSON object that strictly adheres to the expected structure. The JSON must contain:
-      - "explanation": A high-level summary string
-      - "whiteboard": An array of step objects, each with origin, explanation, drawingPlan, and annotations
+      **CRITICAL OUTPUT REQUIREMENTS (MANDATORY)**
 
-      **Output Format:**
-      Your entire output must be a single JSON object. Ensure all coordinates are numbers, all required fields are present, and the structure matches the expected format.
+      You may think as much as you need, but your FINAL OUTPUT must be ONLY a valid JSON object, nothing else.
+
+      **EXACT JSON SCHEMA YOU MUST FOLLOW:**
+
+      {
+        "explanation": "string - high-level summary of the entire lesson",
+        "whiteboard": [
+          {
+            "origin": { "x": number, "y": number },
+            "explanation": "string - what you'll say during this step",
+            "drawingPlan": [
+              { "type": "circle", "center": { "x": number, "y": number }, "radius": number, "color": "#hex", "id": "string", "isFilled": boolean },
+              { "type": "rectangle", "center": { "x": number, "y": number }, "width": number, "height": number, "color": "#hex", "id": "string", "isFilled": boolean },
+              { "type": "path", "points": [{ "x": number, "y": number }], "color": "#hex", "id": "string" }
+            ],
+            "annotations": [
+              { "type": "text", "text": "string", "point": { "x": number, "y": number }, "fontSize": number, "color": "#hex", "id": "string", "isContextual": boolean },
+              { "type": "arrow", "start": { "x": number, "y": number }, "end": { "x": number, "y": number }, "color": "#hex", "id": "string" }
+            ],
+            "highlightIds": ["string"],
+            "retainedLabelIds": ["string"]
+          }
+        ]
+      }
+
+      **EXAMPLE VALID OUTPUT:**
+
+      {
+        "explanation": "Let me show you how a simple switch works using a creative analogy.",
+        "whiteboard": [
+          {
+            "origin": { "x": 0, "y": 0 },
+            "explanation": "Imagine a drawbridge over a river. When it's down, cars can cross.",
+            "drawingPlan": [
+              { "type": "rectangle", "center": { "x": 0, "y": 100 }, "width": 400, "height": 20, "color": "#06b6d4", "id": "bridge" }
+            ],
+            "annotations": [
+              { "type": "text", "text": "Drawbridge", "point": { "x": 0, "y": -50 }, "fontSize": 24, "color": "#FFFFFF", "id": "label_bridge" }
+            ],
+            "highlightIds": [],
+            "retainedLabelIds": []
+          }
+        ]
+      }
+
+      **OUTPUT INSTRUCTIONS:**
+      1. Think through your lesson plan carefully
+      2. Design your visual explanation
+      3. When ready, output ONLY the JSON object
+      4. Do NOT wrap in markdown code blocks
+      5. Do NOT include any text before or after the JSON
+      6. Your response should START with { and END with }
       `;
 
     const response = await together.chat.completions.create({
@@ -189,7 +236,7 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       messages: [
         {
           role: 'user',
-          content: fullPrompt + '\n\nIMPORTANT: Respond with valid JSON only. No markdown, no extra text, just pure JSON.'
+          content: fullPrompt
         }
       ],
       max_tokens: 20000,
