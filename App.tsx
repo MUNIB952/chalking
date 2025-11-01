@@ -171,22 +171,41 @@ const App: React.FC = () => {
         setExplanation(PREPARING_MESSAGES[msgIndex]);
       }, 2500);
 
-      const speechPromises = response.whiteboard.map(step => generateSpeech(step.explanation));
-      const base64AudioClips = await Promise.all(speechPromises);
+      // OPTIMIZATION: Make ONE voice call instead of multiple!
+      // Concatenate all explanations with pauses between them
+      const PAUSE_DURATION = 1.5; // 1.5 seconds pause between steps
+      const fullNarration = response.whiteboard
+        .map(step => step.explanation)
+        .join('. '); // Natural pause with period
+
+      console.log('Making single voice API call for all steps...');
+      const base64Audio = await generateSpeech(fullNarration);
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
-      audioBuffersRef.current = new Array(base64AudioClips.length).fill(null);
-      base64AudioClips.forEach((base64Audio, index) => {
-        if (base64Audio && audioWorkerRef.current) {
-          audioWorkerRef.current.postMessage({
-            base64Audio,
-            sampleRate: 24000,
-            numChannels: 1,
-            index
-          });
-        }
+      // Calculate approximate duration for each step based on text length
+      // Average speaking rate: ~150 words per minute = 2.5 words/second
+      const WORDS_PER_SECOND = 2.5;
+      const stepDurations: number[] = response.whiteboard.map(step => {
+        const wordCount = step.explanation.split(/\s+/).length;
+        return (wordCount / WORDS_PER_SECOND) + PAUSE_DURATION;
       });
+
+      console.log('Step durations (seconds):', stepDurations);
+
+      // Process the single audio buffer
+      audioBuffersRef.current = [null]; // Only one buffer now
+      if (base64Audio && audioWorkerRef.current) {
+        audioWorkerRef.current.postMessage({
+          base64Audio,
+          sampleRate: 24000,
+          numChannels: 1,
+          index: 0 // Single audio track
+        });
+      }
+
+      // Store step timings for playback
+      (window as any).stepDurations = stepDurations;
 
       overallExplanationRef.current = response.explanation;
       setExplanation(response.explanation);
@@ -251,50 +270,51 @@ const App: React.FC = () => {
     };
     
     const runStep = async () => {
-      let buffer: AudioBuffer | null = audioBuffersRef.current[currentStepIndex] || null;
+      // Get the SINGLE continuous audio buffer (not per-step anymore)
+      let buffer: AudioBuffer | null = audioBuffersRef.current[0] || null;
       let waitCount = 0;
       // Wait up to 10 seconds for the buffer to be ready
       while (!buffer && waitCount < 100 && !isCancelled) {
         await new Promise(r => setTimeout(r, 100));
-        buffer = audioBuffersRef.current[currentStepIndex] || null;
+        buffer = audioBuffersRef.current[0] || null;
         waitCount++;
       }
 
       if (isCancelled) return;
 
-      const durationMs = buffer ? (buffer.duration - offsetSec) * 1000 : 4000;
-      
+      // Get step duration from our calculated timings
+      const stepDurations = (window as any).stepDurations || [];
+      const stepDuration = stepDurations[currentStepIndex] || 4; // Default 4 seconds
+      const durationMs = stepDuration * 1000;
+
+      console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s`);
+
       const stepStartTime = performance.now();
       const animate = () => {
         if (isCancelled) return;
-        
-        let currentProgress = 0;
-        if (audioContextRef.current && audioSourceRef.current?.buffer && startedAtRef.current > 0) {
-            const elapsedSec = audioContextRef.current.currentTime - startedAtRef.current;
-            const totalPlayedSec = offsetSec + elapsedSec;
-            currentProgress = Math.min(totalPlayedSec / audioSourceRef.current.buffer.duration, 1);
-        } else {
-            const elapsedMs = performance.now() - stepStartTime;
-            currentProgress = Math.min(elapsedMs / durationMs, 1);
-        }
+
+        const elapsedMs = performance.now() - stepStartTime;
+        const currentProgress = Math.min(elapsedMs / durationMs, 1);
 
         setAnimationProgress(currentProgress);
-        
+
         if (currentProgress < 1) {
             animationFrameRef.current = requestAnimationFrame(animate);
         }
       };
       animationFrameRef.current = requestAnimationFrame(animate);
-      
+
       stepTimeoutRef.current = window.setTimeout(completeAndAdvance, durationMs + 100);
 
-      if (buffer && audioContextRef.current && offsetSec < buffer.duration) {
+      // Play continuous audio (only start on first step)
+      if (currentStepIndex === 0 && buffer && audioContextRef.current) {
         const source = audioContextRef.current.createBufferSource();
         source.buffer = buffer;
         source.connect(audioContextRef.current.destination);
-        source.start(0, offsetSec);
+        source.start(0); // Play from beginning
         audioSourceRef.current = source;
         startedAtRef.current = audioContextRef.current.currentTime;
+        console.log('Started continuous audio playback');
       }
     };
     
@@ -304,13 +324,10 @@ const App: React.FC = () => {
       isCancelled = true;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
-      
-      if (audioSourceRef.current && audioContextRef.current) {
-          const elapsed = audioContextRef.current.currentTime - startedAtRef.current;
-          playbackOffsetRef.current += elapsed;
-          try { audioSourceRef.current.stop(); } catch(e) {}
-          audioSourceRef.current = null;
-      }
+
+      // DON'T stop audio between steps - it's continuous!
+      // Audio continues playing in the background as steps advance
+      // Only stop audio when user explicitly stops/resets (handled by stopEverything)
     };
   }, [status, currentStepIndex, whiteboardSteps, isPaused]);
 
