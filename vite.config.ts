@@ -9,6 +9,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
+
+    // On Vercel, use process.env directly, otherwise use loadEnv
+    const TOGETHER_API_KEY = process.env.TOGETHER_API_KEY || env.TOGETHER_API_KEY;
+
     return {
       server: {
         port: 3000,
@@ -16,7 +20,7 @@ export default defineConfig(({ mode }) => {
       },
       plugins: [react()],
       define: {
-        'process.env.TOGETHER_API_KEY': JSON.stringify(env.TOGETHER_API_KEY)
+        'process.env.TOGETHER_API_KEY': JSON.stringify(TOGETHER_API_KEY)
       },
       resolve: {
         alias: {
