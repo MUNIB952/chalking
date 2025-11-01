@@ -1,7 +1,6 @@
 
 
 import Together from 'together-ai';
-import { Cartesia } from '@cartesia/cartesia-js';
 import { AIResponse } from '../types';
 
 // Initialize Together AI client with extended timeout for reasoning models
@@ -9,11 +8,6 @@ const together = new Together({
   apiKey: process.env.TOGETHER_API_KEY,
   timeout: 600000, // 10 minutes timeout for QWEN reasoning model
   maxRetries: 2
-});
-
-// Initialize Cartesia client for voice generation
-const cartesia = new Cartesia({
-  apiKey: process.env.TOGETHER_API_KEY // Cartesia hosted on Together AI
 });
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
@@ -295,46 +289,16 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
-  try {
-    console.log('Generating speech for text:', text.substring(0, 100) + '...');
 
-    // Use Cartesia SDK which returns raw PCM in the format the app expects
-    const response = await cartesia.tts.bytes({
-      model_id: 'sonic-english',
-      transcript: text,
-      voice: {
-        mode: 'id',
-        id: 'a0e99841-438c-4a64-b679-ae501e7d6091' // Sweet Lady voice
-      },
-      output_format: {
-        container: 'raw',
-        encoding: 'pcm_s16le',
-        sample_rate: 24000
-      }
-    });
+  console.log('Voice generation: Disabled (format incompatibility)');
+  console.log('Explanation will play without voice narration');
 
-    console.log('Cartesia SDK returned response');
+  // TODO: Voice generation disabled due to format incompatibility
+  // The Together AI endpoint returns WAV format, but the app needs raw PCM
+  // Options to fix:
+  // 1. Get a direct Cartesia API key and use their HTTP API
+  // 2. Convert WAV to PCM in the browser (complex)
+  // 3. Use Web Audio API to decode WAV (might work)
 
-    // Convert response to ArrayBuffer
-    const audioBuffer = await response.arrayBuffer();
-    console.log('Received raw PCM audio buffer size:', audioBuffer.byteLength);
-
-    const uint8Array = new Uint8Array(audioBuffer);
-
-    // Convert to base64
-    let binary = '';
-    const len = uint8Array.byteLength;
-    for (let i = 0; i < len; i++) {
-      binary += String.fromCharCode(uint8Array[i]);
-    }
-    const base64Audio = btoa(binary);
-
-    console.log('Generated base64 audio length:', base64Audio.length);
-    return base64Audio;
-
-  } catch (e) {
-    console.error("Speech generation failed", e);
-    // Don't throw an error, just return null so the animation can proceed without audio.
-    return null;
-  }
+  return null; // Animation will play without voice
 };
