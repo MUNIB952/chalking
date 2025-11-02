@@ -82,10 +82,7 @@ const App: React.FC = () => {
 
   const overallExplanationRef = useRef<string>('');
   const playbackOffsetRef = useRef<number>(0);
-  const startedAtRef = useRef<number>(0);
-  const audioOffsetRef = useRef<number>(0); // Tracks where in the audio we should be (for pause/resume)
-  const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused
-  const pausedAtRef = useRef<number>(0); // Tracks when the step was paused 
+  const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused 
   
   const [animationProgress, setAnimationProgress] = useState(0);
 
@@ -101,7 +98,6 @@ const App: React.FC = () => {
 
     setIsPaused(false);
     playbackOffsetRef.current = 0;
-    audioOffsetRef.current = 0; // Reset audio offset for fresh start
     pausedProgressRef.current = 0; // Reset paused progress for fresh start
     setAnimationProgress(0);
   }, []);
@@ -176,38 +172,66 @@ const App: React.FC = () => {
         setExplanation(PREPARING_MESSAGES[msgIndex]);
       }, 2500);
 
-      // OPTIMIZATION: Make ONE voice call instead of multiple!
-      // Concatenate all explanations with pauses between them
-      const PAUSE_DURATION = 1.5; // 1.5 seconds pause between steps
-      const fullNarration = response.whiteboard
-        .map(step => step.explanation)
-        .join('. '); // Natural pause with period
+      // PROFESSIONAL SOLUTION: Generate separate audio for EACH step
+      // This ensures perfect synchronization between audio and visuals
+      console.log(`Generating individual audio for ${response.whiteboard.length} steps...`);
 
-      console.log('Making single voice API call for all steps...');
-      const base64Audio = await generateSpeech(fullNarration);
+      const stepAudioPromises = response.whiteboard.map((step, index) =>
+        generateSpeech(step.explanation).then(audio => ({
+          index,
+          audio
+        }))
+      );
+
+      const stepAudioResults = await Promise.all(stepAudioPromises);
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
-      // Calculate approximate duration for each step based on text length
-      // Average speaking rate: ~150 words per minute = 2.5 words/second
-      const WORDS_PER_SECOND = 2.5;
-      const stepDurations: number[] = response.whiteboard.map(step => {
-        const wordCount = step.explanation.split(/\s+/).length;
-        return (wordCount / WORDS_PER_SECOND) + PAUSE_DURATION;
-      });
+      // Initialize audio buffers array - one per step
+      audioBuffersRef.current = new Array(response.whiteboard.length).fill(null);
 
-      console.log('Step durations (seconds):', stepDurations);
+      // Process each audio file and measure its ACTUAL duration
+      const stepDurations: number[] = [];
 
-      // Process the single audio buffer
-      audioBuffersRef.current = [null]; // Only one buffer now
-      if (base64Audio && audioWorkerRef.current) {
-        audioWorkerRef.current.postMessage({
-          base64Audio,
-          sampleRate: 24000,
-          numChannels: 1,
-          index: 0 // Single audio track
-        });
+      for (const { index, audio } of stepAudioResults) {
+        if (audio && audioWorkerRef.current) {
+          // Send to worker for processing
+          audioWorkerRef.current.postMessage({
+            base64Audio: audio,
+            sampleRate: 24000,
+            numChannels: 1,
+            index
+          });
+        } else {
+          // No audio for this step - use a default duration
+          stepDurations[index] = 3.0; // 3 seconds default
+        }
       }
+
+      // Wait for all audio buffers to be decoded
+      // The worker will populate audioBuffersRef.current[index] for each
+      let waitCount = 0;
+      while (waitCount < 100) {
+        const allLoaded = audioBuffersRef.current.every(buf => buf !== null || buf === undefined);
+        if (allLoaded) break;
+        await new Promise(r => setTimeout(r, 100));
+        waitCount++;
+      }
+
+      // Calculate actual durations from decoded audio buffers
+      for (let i = 0; i < audioBuffersRef.current.length; i++) {
+        const buffer = audioBuffersRef.current[i];
+        if (buffer) {
+          // Use ACTUAL audio duration from the buffer
+          stepDurations[i] = buffer.duration;
+          console.log(`Step ${i}: ${buffer.duration.toFixed(2)}s (measured from audio)`);
+        } else {
+          stepDurations[i] = 3.0; // Fallback
+          console.log(`Step ${i}: 3.00s (no audio, using default)`);
+        }
+      }
+
+      console.log('All audio generated. Step durations:', stepDurations.map(d => d.toFixed(2)));
 
       // Store step timings for playback
       (window as any).stepDurations = stepDurations;
@@ -240,16 +264,12 @@ const App: React.FC = () => {
       const willBePaused = !isPaused;
 
       if (willBePaused) {
-        // Pausing: Save current animation progress and stop audio
+        // Pausing: Save current animation progress and stop this step's audio
         pausedProgressRef.current = animationProgress;
         pausedAtRef.current = performance.now();
 
-        if (audioSourceRef.current && audioContextRef.current) {
-          const currentTime = audioContextRef.current.currentTime;
-          const elapsed = currentTime - startedAtRef.current;
-          audioOffsetRef.current += elapsed;
-
-          console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%, audio offset: ${audioOffsetRef.current.toFixed(2)}s`);
+        if (audioSourceRef.current) {
+          console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
 
           try {
             audioSourceRef.current.stop();
@@ -302,21 +322,21 @@ const App: React.FC = () => {
     };
     
     const runStep = async () => {
-      // Get the SINGLE continuous audio buffer (not per-step anymore)
-      let buffer: AudioBuffer | null = audioBuffersRef.current[0] || null;
+      // Get the audio buffer for THIS specific step
+      let buffer: AudioBuffer | null = audioBuffersRef.current[currentStepIndex] || null;
       let waitCount = 0;
       // Wait up to 10 seconds for the buffer to be ready
       while (!buffer && waitCount < 100 && !isCancelled) {
         await new Promise(r => setTimeout(r, 100));
-        buffer = audioBuffersRef.current[0] || null;
+        buffer = audioBuffersRef.current[currentStepIndex] || null;
         waitCount++;
       }
 
       if (isCancelled) return;
 
-      // Get step duration from our calculated timings
+      // Get ACTUAL duration from the audio buffer (measured, not estimated)
       const stepDurations = (window as any).stepDurations || [];
-      const stepDuration = stepDurations[currentStepIndex] || 4; // Default 4 seconds
+      const stepDuration = buffer ? buffer.duration : (stepDurations[currentStepIndex] || 4);
       const durationMs = stepDuration * 1000;
 
       // Account for paused progress - if we're resuming, start from where we left off
@@ -324,7 +344,7 @@ const App: React.FC = () => {
       const remainingProgress = 1 - startProgress;
       const remainingDurationMs = durationMs * remainingProgress;
 
-      console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s, starting from ${(startProgress * 100).toFixed(1)}% progress`);
+      console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s (actual audio duration), starting from ${(startProgress * 100).toFixed(1)}% progress`);
 
       const stepStartTime = performance.now();
       const animate = () => {
@@ -345,19 +365,19 @@ const App: React.FC = () => {
 
       stepTimeoutRef.current = window.setTimeout(completeAndAdvance, remainingDurationMs + 100);
 
-      // Play continuous audio - start on first step OR resume after pause
+      // Play THIS step's audio (each step has its own audio file)
       if (buffer && audioContextRef.current && !audioSourceRef.current) {
         const source = audioContextRef.current.createBufferSource();
         source.buffer = buffer;
         source.connect(audioContextRef.current.destination);
 
-        // Resume from stored offset (for pause/resume functionality)
-        const startOffset = audioOffsetRef.current;
-        source.start(0, startOffset); // Start from the stored offset
+        // If resuming from pause, start from where we paused within THIS audio file
+        const startOffset = startProgress * buffer.duration;
+        source.start(0, startOffset);
         audioSourceRef.current = source;
         startedAtRef.current = audioContextRef.current.currentTime;
 
-        console.log(`${startOffset > 0 ? 'Resumed' : 'Started'} audio playback at offset: ${startOffset.toFixed(2)}s`);
+        console.log(`Playing step ${currentStepIndex} audio${startOffset > 0 ? ` from ${startOffset.toFixed(2)}s` : ''}`);
       }
     };
     
@@ -368,9 +388,16 @@ const App: React.FC = () => {
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
 
-      // DON'T stop audio between steps - it's continuous!
-      // Audio continues playing in the background as steps advance
-      // Only stop audio when user explicitly stops/resets (handled by stopEverything)
+      // Stop current step's audio when moving to next step
+      // Each step has its own audio file, so we stop the current one
+      if (audioSourceRef.current) {
+        try {
+          audioSourceRef.current.stop();
+        } catch (e) {
+          // Audio already stopped
+        }
+        audioSourceRef.current = null;
+      }
     };
   }, [status, currentStepIndex, whiteboardSteps, isPaused]);
 
