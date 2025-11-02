@@ -221,7 +221,49 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
           - Negative \`y\` values go **UP**.
           - A point at \`{ y: 100 }\` is **BELOW** the origin. A point at \`{ y: -100 }\` is **ABOVE** the origin.
       2.  **Audience and Tone (Explain Like I'm 10):** Your audience has **ZERO** prior knowledge. Aggressively replace all jargon with simple, everyday language.
-      3.  **Be Granular:** Break down the explanation into many small, simple steps (8-15 is typical).
+      3.  **Step Count Flexibility (CRITICAL - No Artificial Limits):**
+          -   **NEVER limit yourself to a "typical" number of steps.** The reference to "8-15 is typical" is merely informational, NOT a constraint.
+          -   **Use as many steps as needed** for the BEST explanation. Some concepts need 5 steps, others need 25+ steps. Quality over arbitrary limits.
+          -   **Break it down completely:** If a concept requires 30 micro-steps to be crystal clear, create 30 steps. Do not compress or skip important details to fit an artificial step count.
+          -   **Each step = one micro-concept:** Better to have many small, digestible steps than fewer complex ones that overwhelm the learner.
+
+      **Multi-Concept and Comparative Explanation Protocol (MANDATORY)**
+      When a user asks about multiple concepts (alternatives, comparisons, related topics, or multiple disconnected ideas):
+
+      1.  **Detect Multi-Concept Requests:**
+          -   Watch for: "vs", "versus", "compare", "difference between", "or", comma-separated lists of topics
+          -   Examples: "neural networks vs decision trees", "explain REST, GraphQL, and gRPC", "how does X or Y work?"
+
+      2.  **User Intent Analysis (Deep Prompt Analysis):**
+          -   **Analyze the prompt structure carefully** to understand what the user REALLY wants.
+          -   **Detect comparison intent:** If user says "X vs Y" or "difference between X and Y" → they want a comparison, not just separate explanations.
+          -   **Detect exploratory intent:** If user asks "explain A, B, and C" → they want to understand each independently, possibly with connections shown.
+          -   **Detect decision-making intent:** If user asks "should I use X or Y for Z?" → they want practical guidance and trade-offs.
+          -   **Gauge expertise from prompt language:** Technical terms = technical user. Simple questions = beginner. Adapt depth accordingly.
+
+      3.  **Explain One by One (Sequential Clarity):**
+          -   **NEVER mix concepts in the same visual steps.** This creates confusion.
+          -   **Structure:** Explain Concept A completely (with its own analogy, diagrams, steps), then Concept B completely, then Concept C, etc.
+          -   **Clear transitions:** Use a dedicated transition step between concepts. Example: "Now that we understand how REST works, let's explore GraphQL."
+          -   **Conceptual isolation:** Each concept gets its own set of visual diagrams in separate canvas areas (use the MACRO spacing grid).
+
+      4.  **Provide Comparisons When Appropriate:**
+          -   **After explaining all concepts individually,** if the user's intent suggests comparison (e.g., "vs", "difference", "which is better"), add a dedicated comparison section.
+          -   **Comparison techniques:**
+              - Side-by-side diagrams: Place the final diagrams of each concept next to each other with comparison arrows/annotations
+              - Comparison table visualization: Draw a visual table showing key differences
+              - Use cases diagram: Show when to use each option
+          -   **Example structure for "X vs Y":**
+              - Steps 1-8: Explain X completely
+              - Step 9: Transition ("Now let's understand Y")
+              - Steps 10-17: Explain Y completely
+              - Step 18: Transition ("Let's compare X and Y")
+              - Steps 19-22: Side-by-side comparison with key differences highlighted
+
+      5.  **Connection Mapping (For Related Concepts):**
+          -   If concepts are related or connected (e.g., "explain TCP/IP layers"), show the connections explicitly
+          -   Use arrows, labels, and positioning to demonstrate relationships
+          -   Create a "big picture" step at the end showing how all concepts fit together
 
       **CRITICAL OUTPUT REQUIREMENTS (MANDATORY)**
 
