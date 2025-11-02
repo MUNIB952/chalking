@@ -6,6 +6,7 @@ import { Controls } from './components/Controls';
 import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { MailIcon, GithubIcon } from './components/icons';
+import { RateLimiter } from './utils/rateLimiter';
 
 // This is the code that will run in the background thread to avoid blocking the UI.
 const audioWorkerCode = `
@@ -82,9 +83,12 @@ const App: React.FC = () => {
 
   const overallExplanationRef = useRef<string>('');
   const playbackOffsetRef = useRef<number>(0);
-  const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused 
-  
+  const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused
+  const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(10)); // 10 calls per minute
+  const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
+
   const [animationProgress, setAnimationProgress] = useState(0);
+  const [audioReadySteps, setAudioReadySteps] = useState<Set<number>>(new Set()); // Track which steps have audio ready
 
   const stopEverything = useCallback(() => {
     if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
@@ -100,6 +104,8 @@ const App: React.FC = () => {
     playbackOffsetRef.current = 0;
     pausedProgressRef.current = 0; // Reset paused progress for fresh start
     setAnimationProgress(0);
+    setAudioReadySteps(new Set()); // Clear audio ready tracking
+    audioGenerationInProgressRef.current.clear(); // Clear generation tracking
   }, []);
 
   useEffect(() => {
@@ -164,82 +170,86 @@ const App: React.FC = () => {
         return;
       }
 
-      setStatus('PREPARING');
-      msgIndex = 0;
-      setExplanation(PREPARING_MESSAGES[msgIndex]);
-      statusMessageIntervalRef.current = window.setInterval(() => {
-        msgIndex = (msgIndex + 1) % PREPARING_MESSAGES.length;
-        setExplanation(PREPARING_MESSAGES[msgIndex]);
-      }, 2500);
+      // PROGRESSIVE EXECUTION: Start showing content immediately
+      // Initialize state for progressive playback
+      audioBuffersRef.current = new Array(response.whiteboard.length).fill(null);
+      setAudioReadySteps(new Set());
+      audioGenerationInProgressRef.current.clear();
+      (window as any).stepDurations = new Array(response.whiteboard.length).fill(3.0);
 
-      // PROFESSIONAL SOLUTION: Generate separate audio for EACH step
-      // This ensures perfect synchronization between audio and visuals
-      console.log(`Generating individual audio for ${response.whiteboard.length} steps...`);
+      // Set steps immediately so UI can prepare
+      overallExplanationRef.current = response.explanation;
+      setWhiteboardSteps(response.whiteboard);
 
-      const stepAudioPromises = response.whiteboard.map((step, index) =>
-        generateSpeech(step.explanation).then(audio => ({
-          index,
-          audio
-        }))
-      );
+      // Start generating audio PROGRESSIVELY with rate limiting
+      console.log(`Starting progressive audio generation for ${response.whiteboard.length} steps...`);
+      console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute`);
 
-      const stepAudioResults = await Promise.all(stepAudioPromises);
+      // Helper function to generate and process audio for a single step
+      const generateStepAudio = async (step: WhiteboardStep, index: number) => {
+        if (audioGenerationInProgressRef.current.has(index)) {
+          return; // Already generating
+        }
 
+        audioGenerationInProgressRef.current.add(index);
+        console.log(`[Step ${index}] Starting audio generation...`);
+
+        try {
+          // Use rate limiter to respect API quota (10 calls/minute)
+          const audio = await rateLimiterRef.current.execute(() =>
+            generateSpeech(step.explanation)
+          );
+
+          if (audio && audioWorkerRef.current) {
+            // Send to worker for processing
+            audioWorkerRef.current.postMessage({
+              base64Audio: audio,
+              sampleRate: 24000,
+              numChannels: 1,
+              index
+            });
+
+            // Wait for worker to decode
+            let waitCount = 0;
+            while (waitCount < 100) {
+              if (audioBuffersRef.current[index]) {
+                const buffer = audioBuffersRef.current[index];
+                (window as any).stepDurations[index] = buffer!.duration;
+                console.log(`[Step ${index}] Audio ready: ${buffer!.duration.toFixed(2)}s`);
+
+                // Mark this step as ready
+                setAudioReadySteps(prev => new Set(prev).add(index));
+                break;
+              }
+              await new Promise(r => setTimeout(r, 50));
+              waitCount++;
+            }
+          }
+        } catch (error) {
+          console.error(`[Step ${index}] Audio generation failed:`, error);
+        } finally {
+          audioGenerationInProgressRef.current.delete(index);
+        }
+      };
+
+      // Generate audio for first step IMMEDIATELY (high priority)
+      await generateStepAudio(response.whiteboard[0], 0);
+
+      // Clear preparing messages
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
-      // Initialize audio buffers array - one per step
-      audioBuffersRef.current = new Array(response.whiteboard.length).fill(null);
-
-      // Process each audio file and measure its ACTUAL duration
-      const stepDurations: number[] = [];
-
-      for (const { index, audio } of stepAudioResults) {
-        if (audio && audioWorkerRef.current) {
-          // Send to worker for processing
-          audioWorkerRef.current.postMessage({
-            base64Audio: audio,
-            sampleRate: 24000,
-            numChannels: 1,
-            index
-          });
-        } else {
-          // No audio for this step - use a default duration
-          stepDurations[index] = 3.0; // 3 seconds default
-        }
-      }
-
-      // Wait for all audio buffers to be decoded
-      // The worker will populate audioBuffersRef.current[index] for each
-      let waitCount = 0;
-      while (waitCount < 100) {
-        const allLoaded = audioBuffersRef.current.every(buf => buf !== null || buf === undefined);
-        if (allLoaded) break;
-        await new Promise(r => setTimeout(r, 100));
-        waitCount++;
-      }
-
-      // Calculate actual durations from decoded audio buffers
-      for (let i = 0; i < audioBuffersRef.current.length; i++) {
-        const buffer = audioBuffersRef.current[i];
-        if (buffer) {
-          // Use ACTUAL audio duration from the buffer
-          stepDurations[i] = buffer.duration;
-          console.log(`Step ${i}: ${buffer.duration.toFixed(2)}s (measured from audio)`);
-        } else {
-          stepDurations[i] = 3.0; // Fallback
-          console.log(`Step ${i}: 3.00s (no audio, using default)`);
-        }
-      }
-
-      console.log('All audio generated. Step durations:', stepDurations.map(d => d.toFixed(2)));
-
-      // Store step timings for playback
-      (window as any).stepDurations = stepDurations;
-
-      overallExplanationRef.current = response.explanation;
+      // Start playing! First step audio is ready
       setExplanation(response.explanation);
-      setWhiteboardSteps(response.whiteboard);
       setStatus('DRAWING');
+
+      // Generate remaining steps in background (while first step plays)
+      // This runs AFTER we start playing, so user sees content immediately
+      (async () => {
+        for (let i = 1; i < response.whiteboard.length; i++) {
+          // Generate next step's audio
+          generateStepAudio(response.whiteboard[i], i);
+        }
+      })();
 
     } catch (err) {
       console.error(err);
@@ -322,17 +332,42 @@ const App: React.FC = () => {
     };
     
     const runStep = async () => {
-      // Get the audio buffer for THIS specific step
+      // Check if audio is ready for THIS step
       let buffer: AudioBuffer | null = audioBuffersRef.current[currentStepIndex] || null;
-      let waitCount = 0;
-      // Wait up to 10 seconds for the buffer to be ready
-      while (!buffer && waitCount < 100 && !isCancelled) {
-        await new Promise(r => setTimeout(r, 100));
-        buffer = audioBuffersRef.current[currentStepIndex] || null;
-        waitCount++;
+
+      // If audio not ready, show loading message and wait
+      if (!buffer) {
+        console.log(`[Step ${currentStepIndex}] Waiting for audio... (rate-limited queue)`);
+        setExplanation('Preparing audio for this step...');
+
+        let waitCount = 0;
+        // Wait up to 60 seconds for the buffer (rate limiting may cause delays)
+        while (!buffer && waitCount < 600 && !isCancelled) {
+          await new Promise(r => setTimeout(r, 100));
+          buffer = audioBuffersRef.current[currentStepIndex] || null;
+
+          // Update loading message every few seconds
+          if (waitCount % 30 === 0 && !buffer) {
+            const queueLength = rateLimiterRef.current.getQueueLength();
+            const remaining = rateLimiterRef.current.getRemainingCalls();
+            console.log(`[Step ${currentStepIndex}] Still waiting... Queue: ${queueLength}, Remaining calls: ${remaining}`);
+          }
+
+          waitCount++;
+        }
+
+        // Restore step explanation once audio arrives
+        if (buffer && currentStep) {
+          setExplanation(currentStep.explanation);
+        }
       }
 
       if (isCancelled) return;
+
+      if (!buffer) {
+        console.error(`[Step ${currentStepIndex}] Audio failed to load after waiting`);
+        // Play without audio (visual only)
+      }
 
       // Get ACTUAL duration from the audio buffer (measured, not estimated)
       const stepDurations = (window as any).stepDurations || [];
