@@ -248,7 +248,7 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       `;
 
     const response = await gemini.models.generateContent({
-      model: 'gemini-2.5-pro',
+      model: 'gemini-3.0-pro',
       contents: fullPrompt,
       config: {
         maxOutputTokens: 60000,
