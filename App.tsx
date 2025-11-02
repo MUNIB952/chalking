@@ -83,7 +83,9 @@ const App: React.FC = () => {
   const overallExplanationRef = useRef<string>('');
   const playbackOffsetRef = useRef<number>(0);
   const startedAtRef = useRef<number>(0);
-  const audioOffsetRef = useRef<number>(0); // Tracks where in the audio we should be (for pause/resume) 
+  const audioOffsetRef = useRef<number>(0); // Tracks where in the audio we should be (for pause/resume)
+  const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused
+  const pausedAtRef = useRef<number>(0); // Tracks when the step was paused 
   
   const [animationProgress, setAnimationProgress] = useState(0);
 
@@ -100,6 +102,7 @@ const App: React.FC = () => {
     setIsPaused(false);
     playbackOffsetRef.current = 0;
     audioOffsetRef.current = 0; // Reset audio offset for fresh start
+    pausedProgressRef.current = 0; // Reset paused progress for fresh start
     setAnimationProgress(0);
   }, []);
 
@@ -236,29 +239,38 @@ const App: React.FC = () => {
     if (status === 'DRAWING') {
       const willBePaused = !isPaused;
 
-      if (willBePaused && audioSourceRef.current && audioContextRef.current) {
-        // Pausing: Calculate current position and stop audio
-        const currentTime = audioContextRef.current.currentTime;
-        const elapsed = currentTime - startedAtRef.current;
-        audioOffsetRef.current += elapsed;
+      if (willBePaused) {
+        // Pausing: Save current animation progress and stop audio
+        pausedProgressRef.current = animationProgress;
+        pausedAtRef.current = performance.now();
 
-        console.log(`Pausing audio at offset: ${audioOffsetRef.current.toFixed(2)}s`);
+        if (audioSourceRef.current && audioContextRef.current) {
+          const currentTime = audioContextRef.current.currentTime;
+          const elapsed = currentTime - startedAtRef.current;
+          audioOffsetRef.current += elapsed;
 
-        try {
-          audioSourceRef.current.stop();
-        } catch (e) {
-          console.log('Audio source already stopped');
+          console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%, audio offset: ${audioOffsetRef.current.toFixed(2)}s`);
+
+          try {
+            audioSourceRef.current.stop();
+          } catch (e) {
+            console.log('Audio source already stopped');
+          }
+          audioSourceRef.current = null;
         }
-        audioSourceRef.current = null;
+      } else {
+        // Resuming: Log that we're resuming from saved progress
+        console.log(`Resuming from progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
       }
 
       setIsPaused(willBePaused);
     }
-  }, [status, isPaused]);
+  }, [status, isPaused, animationProgress]);
   
   useEffect(() => {
     playbackOffsetRef.current = 0;
     setAnimationProgress(0);
+    pausedProgressRef.current = 0; // Reset paused progress for new step
   }, [currentStepIndex]);
 
   useEffect(() => {
@@ -307,14 +319,21 @@ const App: React.FC = () => {
       const stepDuration = stepDurations[currentStepIndex] || 4; // Default 4 seconds
       const durationMs = stepDuration * 1000;
 
-      console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s`);
+      // Account for paused progress - if we're resuming, start from where we left off
+      const startProgress = pausedProgressRef.current;
+      const remainingProgress = 1 - startProgress;
+      const remainingDurationMs = durationMs * remainingProgress;
+
+      console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s, starting from ${(startProgress * 100).toFixed(1)}% progress`);
 
       const stepStartTime = performance.now();
       const animate = () => {
         if (isCancelled) return;
 
         const elapsedMs = performance.now() - stepStartTime;
-        const currentProgress = Math.min(elapsedMs / durationMs, 1);
+        // Calculate progress from paused point
+        const progressDelta = Math.min(elapsedMs / durationMs, remainingProgress);
+        const currentProgress = Math.min(startProgress + progressDelta, 1);
 
         setAnimationProgress(currentProgress);
 
@@ -324,7 +343,7 @@ const App: React.FC = () => {
       };
       animationFrameRef.current = requestAnimationFrame(animate);
 
-      stepTimeoutRef.current = window.setTimeout(completeAndAdvance, durationMs + 100);
+      stepTimeoutRef.current = window.setTimeout(completeAndAdvance, remainingDurationMs + 100);
 
       // Play continuous audio - start on first step OR resume after pause
       if (buffer && audioContextRef.current && !audioSourceRef.current) {
