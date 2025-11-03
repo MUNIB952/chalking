@@ -410,7 +410,6 @@ const App: React.FC = () => {
         const startOffset = startProgress * buffer.duration;
         source.start(0, startOffset);
         audioSourceRef.current = source;
-        startedAtRef.current = audioContextRef.current.currentTime;
 
         console.log(`Playing step ${currentStepIndex} audio${startOffset > 0 ? ` from ${startOffset.toFixed(2)}s` : ''}`);
       }
