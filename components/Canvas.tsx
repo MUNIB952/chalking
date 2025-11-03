@@ -543,28 +543,34 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     const highlightIds = currentStep?.highlightIds;
     if (status === 'DRAWING' && highlightIds && highlightIds.length > 0) {
-        ctx.save();
-        const pulse = (Math.sin(timestamp / 200) + 1) / 2;
-        ctx.shadowColor = '#06b6d4';
-        ctx.shadowBlur = 15 + pulse * 10;
-        
-        for (const id of highlightIds) {
-            const itemWithOrigin = itemsById.get(id);
-            if (itemWithOrigin) {
-                const { stepOrigin, ...item } = itemWithOrigin;
-                ctx.strokeStyle = item.color || '#06b6d4';
-                ctx.fillStyle = item.color || '#06b6d4';
-                ctx.lineWidth = 4;
+        // CRITICAL: Only highlight items that are NOT in the current step's drawing plan
+        // This prevents the "reveal then trace" bug where items appear fully drawn before being animated
+        const safeHighlightIds = highlightIds.filter(id => !currentStepItemIds.has(id));
 
-                if (item.type === 'rectangle') drawAnimatedRectangle(ctx, item, stepOrigin, 1);
-                else if (item.type === 'circle') drawAnimatedCircle(ctx, item, stepOrigin, 1);
-                else if (item.type === 'path') drawAnimatedPath(ctx, item.points, stepOrigin, 1);
-                else if (item.type === 'arrow') drawAnimatedArrow(ctx, item, stepOrigin, 1);
-                else if (item.type === 'text') drawAnimatedText(ctx, item, stepOrigin, 1);
-                else if (item.type === 'strikethrough') drawAnimatedStrikethrough(ctx, item, stepOrigin, 1);
+        if (safeHighlightIds.length > 0) {
+            ctx.save();
+            const pulse = (Math.sin(timestamp / 200) + 1) / 2;
+            ctx.shadowColor = '#06b6d4';
+            ctx.shadowBlur = 15 + pulse * 10;
+
+            for (const id of safeHighlightIds) {
+                const itemWithOrigin = itemsById.get(id);
+                if (itemWithOrigin) {
+                    const { stepOrigin, ...item } = itemWithOrigin;
+                    ctx.strokeStyle = item.color || '#06b6d4';
+                    ctx.fillStyle = item.color || '#06b6d4';
+                    ctx.lineWidth = 4;
+
+                    if (item.type === 'rectangle') drawAnimatedRectangle(ctx, item, stepOrigin, 1);
+                    else if (item.type === 'circle') drawAnimatedCircle(ctx, item, stepOrigin, 1);
+                    else if (item.type === 'path') drawAnimatedPath(ctx, item.points, stepOrigin, 1);
+                    else if (item.type === 'arrow') drawAnimatedArrow(ctx, item, stepOrigin, 1);
+                    else if (item.type === 'text') drawAnimatedText(ctx, item, stepOrigin, 1);
+                    else if (item.type === 'strikethrough') drawAnimatedStrikethrough(ctx, item, stepOrigin, 1);
+                }
             }
+            ctx.restore();
         }
-        ctx.restore();
     }
 
     // Render completed steps and current step

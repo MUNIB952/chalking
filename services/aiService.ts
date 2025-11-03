@@ -174,6 +174,37 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       -   Adding to an *existing* diagram and need old labels? Use \`retainedLabelIds\`.
       An unlabeled element is a failure.
 
+      **CRITICAL DIRECTIVE: highlightIds Usage (ABSOLUTELY MANDATORY - READ CAREFULLY)**
+      This is a CRITICAL rule that, if violated, creates a terrible user experience. The \`highlightIds\` array is ONLY for providing visual context by highlighting PREVIOUSLY DRAWN elements. It is NOT for items that will be drawn in the current step.
+
+      **THE IRON RULE:**
+      -   **NEVER** put an item's ID in \`highlightIds\` if that same item appears in the current step's \`drawingPlan\` or \`annotations\`.
+      -   **NEVER** put an item's ID in \`highlightIds\` if that item will be traced/drawn/animated in the current step.
+      -   **ONLY** use \`highlightIds\` for items that were drawn in PREVIOUS steps and you want to show with a pulsing glow for context.
+
+      **What highlightIds Does:**
+      When you put an item ID in \`highlightIds\`, that item will be INSTANTLY shown at FULL completion with a pulsing cyan glow effect. This is for drawing attention to something that ALREADY EXISTS from a previous step.
+
+      **Correct Usage Example:**
+      - Step 1: You draw a circle with \`id: "circle_a"\` in the \`drawingPlan\`. It animates being drawn.
+      - Step 2: You want to draw a new circle \`"circle_b"\` and show \`"circle_a"\` pulsing for context.
+        - ✅ CORRECT: Put \`"circle_a"\` in \`highlightIds\`. Put \`"circle_b"\` in \`drawingPlan\`.
+        - ❌ WRONG: Put \`"circle_b"\` in \`highlightIds\`. This would reveal it instantly, then trace it again.
+
+      **The Consequence of Violation:**
+      If you violate this rule by putting an item in both \`highlightIds\` AND \`drawingPlan\` of the same step, the visual will be broken:
+      1. The item appears INSTANTLY (revealed from \`highlightIds\`)
+      2. Then it gets traced/animated AGAIN (from \`drawingPlan\`)
+      This "reveal then trace" behavior is confusing and must NEVER happen.
+
+      **When to Use highlightIds:**
+      - Use it SPARINGLY and ONLY when you need to draw attention to an existing element while drawing something new.
+      - Example: "Let's highlight the satellite we drew earlier while we add the new intersection point."
+      - Most steps should have an empty \`highlightIds\` array or omit it entirely.
+
+      **Default Behavior:**
+      If you don't need to highlight anything from previous steps, simply use \`"highlightIds": []\` or omit the property entirely.
+
       **The Analogy-First Method (MANDATORY)**
       Your primary teaching strategy is to ground every explanation in a deeply relatable, real-world analogy. This is not just a quick comparison; it is the foundation of the entire lesson.
       1.  **Select a Powerful Analogy:** Choose an analogy that is universally understood and maps clearly to the core mechanics of the concept you are explaining. Examples: A brilliant chef for an LLM, a super-efficient library for a database, a team of specialized workers on an assembly line for a computer's CPU.
