@@ -338,6 +338,23 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
     console.log('First 500 chars:', responseText.substring(0, 500));
     console.log('Last 500 chars:', responseText.substring(responseText.length - 500));
 
+    // Log token usage information
+    if (response.usageMetadata) {
+      console.log('📊 TOKEN USAGE:');
+      console.log('  Input tokens:', response.usageMetadata.promptTokenCount || 'N/A');
+      console.log('  Output tokens:', response.usageMetadata.candidatesTokenCount || 'N/A');
+      console.log('  Total tokens:', response.usageMetadata.totalTokenCount || 'N/A');
+    }
+
+    // Log complete response metadata (if available)
+    console.log('📦 Complete API Response:', JSON.stringify({
+      model: 'gemini-2.5-pro',
+      promptLength: fullPrompt.length,
+      responseLength: responseText.length,
+      usageMetadata: response.usageMetadata,
+      finishReason: response.candidates?.[0]?.finishReason
+    }, null, 2));
+
     // Use the robust parser on the response text.
     return robustJsonParse(responseText);
   } catch (e) {
@@ -361,7 +378,8 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
   try {
-    console.log('Generating speech with Gemini TTS for text:', text.substring(0, 100) + '...');
+    console.log('🎤 Generating speech with Gemini TTS for text:', text.substring(0, 100) + '...');
+    console.log('  Text length:', text.length, 'characters');
 
     // Use Gemini 2.5 Flash TTS - returns raw PCM base64 directly!
     const response = await gemini.models.generateContent({
@@ -380,11 +398,26 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
     const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
 
     if (!base64Audio) {
-      console.error("Gemini TTS returned no audio data");
+      console.error("❌ Gemini TTS returned no audio data");
+      console.error("  Response structure:", JSON.stringify({
+        hasCandidates: !!response.candidates,
+        candidateCount: response.candidates?.length,
+        firstCandidate: response.candidates?.[0] ? 'exists' : 'missing',
+        usageMetadata: response.usageMetadata
+      }, null, 2));
       return null;
     }
 
-    console.log('Generated PCM base64 audio length:', base64Audio.length);
+    console.log('✅ Generated PCM base64 audio length:', base64Audio.length);
+
+    // Log TTS metadata
+    if (response.usageMetadata) {
+      console.log('📊 TTS USAGE:');
+      console.log('  Input characters:', text.length);
+      console.log('  Audio data size:', base64Audio.length, 'bytes (base64)');
+      console.log('  Usage metadata:', response.usageMetadata);
+    }
+
     return base64Audio;
 
   } catch (e) {

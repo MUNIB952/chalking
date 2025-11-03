@@ -84,6 +84,7 @@ const App: React.FC = () => {
   const overallExplanationRef = useRef<string>('');
   const playbackOffsetRef = useRef<number>(0);
   const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused
+  const pausedAtRef = useRef<number>(0); // Timestamp when paused
   const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(10)); // 10 calls per minute
   const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
 
