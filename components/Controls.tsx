@@ -78,7 +78,7 @@ export const Controls: React.FC<ControlsProps> = ({
 
 
   return (
-    <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 md:left-auto md:right-auto md:mx-auto max-w-2xl w-full">
+    <div className="absolute bottom-2 left-2 right-2 sm:bottom-4 sm:left-4 sm:right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto max-w-2xl w-full md:w-auto md:min-w-[640px]">
       <div className="bg-gray-800/50 backdrop-blur-xl border border-gray-600/50 rounded-xl sm:rounded-2xl shadow-2xl p-2.5 sm:p-4 pt-1.5 sm:pt-2 pb-2 sm:pb-3 text-white">
 
         {/* --- Top Section: Swaps between Examples and Progress --- */}
