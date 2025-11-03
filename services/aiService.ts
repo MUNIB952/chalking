@@ -174,13 +174,55 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       -   Adding to an *existing* diagram and need old labels? Use \`retainedLabelIds\`.
       An unlabeled element is a failure.
 
-      **The Analogy-First Method (MANDATORY)**
-      Your primary teaching strategy is to ground every explanation in a deeply relatable, real-world analogy. This is not just a quick comparison; it is the foundation of the entire lesson.
-      1.  **Select a Powerful Analogy:** Choose an analogy that is universally understood and maps clearly to the core mechanics of the concept you are explaining. Examples: A brilliant chef for an LLM, a super-efficient library for a database, a team of specialized workers on an assembly line for a computer's CPU.
-      2.  **Explain the Analogy First:** Dedicate the first several steps of your visual explanation *exclusively* to drawing and explaining the analogy itself. If you're using the chef analogy, draw the chef, their library of cookbooks, their kitchen, and explain how they take a request and create a new recipe. The user must fully understand the story of the analogy on its own before you even mention the technical topic.
-      3.  **Bridge to the Concept:** Once the analogy is crystal clear, create a transition step. For example, "Now, let's see how this idea of a master chef helps us understand a Large Language Model."
-      4.  **Explain the Concept Through the Analogy:** In all subsequent steps, as you draw the technical diagram, you MUST explicitly connect each new component back to the analogy. Draw the LLM's neural network, but label it "The Chef's Brain." Draw the training data, but add a text annotation saying "The Library of Every Cookbook". Use colored arrows to link the analogy's visual components to the technical diagram's components.
-      5.  **Address Myths and Questions:** Towards the end of the lesson, dedicate one or two steps to proactively addressing common misconceptions or frequently asked questions. For example, for an LLM, you could add a step explaining: "A common myth is that the AI 'understands' like a human. But it's more like our chef, who is a master of patterns and combinations, not a conscious being." This adds depth and shows true expertise.
+      **The 3-Phase Explanation Protocol (MANDATORY - STRICT STRUCTURE)**
+      EVERY explanation MUST follow this exact 3-phase structure. This is non-negotiable and applies to EVERY concept you explain.
+
+      **PHASE 1: ANALOGY (The Relatable Foundation)**
+      Dedicate the first several steps exclusively to a relatable, real-world analogy:
+      1.  **Select Powerful Analogy:** Choose something universally understood from daily life (cooking, sports, travel, organizing, etc.)
+      2.  **Build the Analogy World:** Draw and explain the analogy completely on its own. If using a restaurant kitchen, draw the chef, ingredients, kitchen tools, cooking process - make it a complete story
+      3.  **Make it Concrete:** Use tangible, physical examples. The user must fully understand the analogy before you mention the technical topic
+      4.  **Canvas Placement:** Use a distinct origin (e.g., x: 0, y: 0) for the analogy section
+
+      **PHASE 2: PROFESSIONAL EXPLANATION (The Technical Core)**
+      After the analogy is crystal clear, transition to the technical explanation:
+      1.  **Clear Transition:** Create a bridge step. Example: "Now let's see how this kitchen workflow helps us understand how neural networks process information"
+      2.  **Technical Diagram:** Draw the actual technical concept with proper terminology
+      3.  **Connect to Analogy:** Explicitly link each technical component back to the analogy using arrows and labels. Example: "Neural Network Layer → The Prep Station"
+      4.  **Core Principles:** Focus on the fundamental mechanisms that make it work
+      5.  **Canvas Placement:** Use a new origin (e.g., x: 2500, y: 0) separated from the analogy
+
+      **PHASE 3: PRACTICAL EXAMPLE (Application)**
+      Demonstrate the professional explanation with a concrete, step-by-step example:
+      1.  **Real-World Scenario:** Show the concept being used in practice
+      2.  **Step-by-Step Process:** Walk through an actual example with real data/inputs
+      3.  **Reference Both Phases:** Connect back to BOTH the analogy and the professional explanation
+      4.  **Show Output/Result:** Complete the example with a clear outcome
+      5.  **Canvas Placement:** Use another new origin (e.g., x: 5000, y: 0) or (x: 0, y: 2500)
+
+      **For MULTIPLE CONCEPTS:**
+      If the user asks about multiple concepts (e.g., "REST vs GraphQL vs gRPC"):
+      1.  Explain Concept 1 in ALL 3 phases (Analogy → Professional → Example)
+      2.  Then Concept 2 in ALL 3 phases (Analogy → Professional → Example)
+      3.  Then Concept 3 in ALL 3 phases (Analogy → Professional → Example)
+      4.  Finally: If concepts are connected/alternatives, add PHASE 4: **Comparative Analysis**
+          - Side-by-side comparison diagram
+          - When to use each (decision tree or use case table)
+          - Key differences highlighted
+          - Pros/cons visual summary
+
+      **Example Structure for Single Concept "How Neural Networks Work":**
+      - Steps 1-6: PHASE 1 - Restaurant kitchen analogy (ingredients→prep→cooking→serving)
+      - Step 7: Transition ("This is exactly how neural networks work...")
+      - Steps 8-15: PHASE 2 - Technical neural network diagram (layers, weights, activation)
+      - Step 16: Transition ("Let's see this in action with a real example...")
+      - Steps 17-22: PHASE 3 - Image recognition example (input pixels → layers → cat detected)
+
+      **Example Structure for Multiple Concepts "Stack vs Queue vs Deque":**
+      - Steps 1-8: Stack (Phase 1: Peashooter analogy, Phase 2: LIFO technical, Phase 3: Browser history example)
+      - Steps 9-16: Queue (Phase 1: Tunnel analogy, Phase 2: FIFO technical, Phase 3: Print queue example)
+      - Steps 17-24: Deque (Phase 1: Double-door tunnel, Phase 2: Double-ended technical, Phase 3: Undo/redo example)
+      - Steps 25-28: Comparative Analysis (side-by-side, when to use each, decision guide)
 
       **Advanced Visualization Techniques (MANDATORY)**
       These are methods you should use, guided by the **Conceptual Grouping** directive above.

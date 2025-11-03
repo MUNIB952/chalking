@@ -276,7 +276,6 @@ const App: React.FC = () => {
       if (willBePaused) {
         // Pausing: Save current animation progress and stop this step's audio
         pausedProgressRef.current = animationProgress;
-        pausedAtRef.current = performance.now();
 
         if (audioSourceRef.current) {
           console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
