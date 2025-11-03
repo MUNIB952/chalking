@@ -463,25 +463,24 @@ const App: React.FC = () => {
                   style={{
                     imageRendering: 'crisp-edges',
                     maxWidth: '150px',
-                    filter: 'brightness(1.3) contrast(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4))',
-                    fontFamily: 'Arial, sans-serif'
+                    filter: 'brightness(1.3) contrast(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4))'
                   }}
                 />
             </div>
             <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-gray-800/60 to-gray-700/60 backdrop-blur-2xl border border-gray-600/40 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-xl" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    <span className="text-xs sm:text-sm text-gray-300 font-medium">Research Preview</span>
+                <div className="flex items-center gap-2 sm:gap-3 bg-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    <span className="text-xs sm:text-sm text-gray-400">Research Preview</span>
                     {(status === 'DRAWING' || status === 'DONE') && (
                         <>
-                            <div className="w-px h-4 bg-gray-500/50"></div>
+                            <div className="w-px h-4 bg-gray-700"></div>
                             <button
                                 onClick={() => (window as any).__canvasFocus?.()}
-                                className="group flex items-center gap-1.5 text-gray-300 hover:text-[#1F51FF] transition-all duration-300 active:scale-95"
+                                className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors duration-200"
                                 title="Focus on current drawing"
                                 aria-label="Focus on current drawing"
                             >
-                                <FocusIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5 group-hover:drop-shadow-[0_0_6px_rgba(31,81,255,0.6)]" />
-                                <span className="text-xs sm:text-sm font-medium hidden sm:inline">Focus</span>
+                                <FocusIcon className="w-4 h-4" style={{ color: '#1F51FF' }} />
+                                <span className="text-xs sm:text-sm hidden sm:inline">Focus</span>
                             </button>
                         </>
                     )}
