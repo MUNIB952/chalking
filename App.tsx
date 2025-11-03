@@ -242,12 +242,28 @@ const App: React.FC = () => {
       setExplanation(response.explanation);
       setStatus('DRAWING');
 
-      // Generate remaining steps in background (while first step plays)
-      // This runs AFTER we start playing, so user sees content immediately
+      // Generate remaining steps in background with smart batching
+      // Batch 1: Queue up to 9 more requests immediately (total 10 in first minute)
+      // Batch 2+: Queue remaining requests after 60 seconds
       (async () => {
-        for (let i = 1; i < response.whiteboard.length; i++) {
-          // Generate next step's audio
+        const totalSteps = response.whiteboard.length;
+        const firstBatchSize = Math.min(10, totalSteps); // Up to 10 in first batch (including step 0)
+
+        // Queue next 9 steps immediately (step 0 already done)
+        console.log(`Queueing steps 1-${firstBatchSize - 1} for immediate generation...`);
+        for (let i = 1; i < firstBatchSize; i++) {
           generateStepAudio(response.whiteboard[i], i);
+        }
+
+        // If there are more steps, queue them after 60 seconds
+        if (totalSteps > firstBatchSize) {
+          console.log(`Will queue steps ${firstBatchSize}-${totalSteps - 1} after 60 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+
+          console.log(`Queueing remaining ${totalSteps - firstBatchSize} steps...`);
+          for (let i = firstBatchSize; i < totalSteps; i++) {
+            generateStepAudio(response.whiteboard[i], i);
+          }
         }
       })();
 
