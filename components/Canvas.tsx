@@ -567,15 +567,27 @@ export const Canvas: React.FC<CanvasProps> = ({
         ctx.restore();
     }
 
-    for (let i = 0; i < currentStepIndex; i++) {
+    // Render completed steps and current step
+    if (status === 'DONE') {
+      // When explanation is complete, render ALL steps at full progress
+      for (let i = 0; i < resolvedSteps.length; i++) {
         const step = resolvedSteps[i];
         if (step) {
-            drawStepContent(ctx, step, 1, currentStepItemIds);
+          drawStepContent(ctx, step, 1);
         }
-    }
-    
-    if (currentStep) {
+      }
+    } else {
+      // During drawing, render previous steps + current animated step
+      for (let i = 0; i < currentStepIndex; i++) {
+        const step = resolvedSteps[i];
+        if (step) {
+          drawStepContent(ctx, step, 1, currentStepItemIds);
+        }
+      }
+
+      if (currentStep) {
         drawStepContent(ctx, currentStep, animationProgress);
+      }
     }
     
     if (status === 'DRAWING' && !isPaused && penTipPosition.current) {
