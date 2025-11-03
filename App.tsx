@@ -84,6 +84,7 @@ const App: React.FC = () => {
   const overallExplanationRef = useRef<string>('');
   const playbackOffsetRef = useRef<number>(0);
   const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused
+  const pausedAtRef = useRef<number>(0); // Timestamp when paused
   const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(10)); // 10 calls per minute
   const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
 
@@ -242,12 +243,28 @@ const App: React.FC = () => {
       setExplanation(response.explanation);
       setStatus('DRAWING');
 
-      // Generate remaining steps in background (while first step plays)
-      // This runs AFTER we start playing, so user sees content immediately
+      // Generate remaining steps in background with smart batching
+      // Batch 1: Queue up to 9 more requests immediately (total 10 in first minute)
+      // Batch 2+: Queue remaining requests after 60 seconds
       (async () => {
-        for (let i = 1; i < response.whiteboard.length; i++) {
-          // Generate next step's audio
+        const totalSteps = response.whiteboard.length;
+        const firstBatchSize = Math.min(10, totalSteps); // Up to 10 in first batch (including step 0)
+
+        // Queue next 9 steps immediately (step 0 already done)
+        console.log(`Queueing steps 1-${firstBatchSize - 1} for immediate generation...`);
+        for (let i = 1; i < firstBatchSize; i++) {
           generateStepAudio(response.whiteboard[i], i);
+        }
+
+        // If there are more steps, queue them after 60 seconds
+        if (totalSteps > firstBatchSize) {
+          console.log(`Will queue steps ${firstBatchSize}-${totalSteps - 1} after 60 seconds...`);
+          await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
+
+          console.log(`Queueing remaining ${totalSteps - firstBatchSize} steps...`);
+          for (let i = firstBatchSize; i < totalSteps; i++) {
+            generateStepAudio(response.whiteboard[i], i);
+          }
         }
       })();
 
@@ -439,7 +456,7 @@ const App: React.FC = () => {
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative">
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pointer-events-none">
             <div className="pointer-events-auto">
-                <img src="/icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto" />
+                <img src="/icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto object-contain" style={{ imageRendering: 'auto' }} />
             </div>
             <div className="pointer-events-auto">
                 <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-sm text-gray-500 shadow-lg">
