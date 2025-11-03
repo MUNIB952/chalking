@@ -5,7 +5,7 @@ import { Canvas } from './components/Canvas';
 import { Controls } from './components/Controls';
 import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
-import { MailIcon, GithubIcon, FocusIcon } from './components/icons';
+import { FocusIcon } from './components/icons';
 import { RateLimiter } from './utils/rateLimiter';
 
 // This is the code that will run in the background thread to avoid blocking the UI.
@@ -463,32 +463,28 @@ const App: React.FC = () => {
                   style={{
                     imageRendering: 'crisp-edges',
                     maxWidth: '150px',
-                    filter: 'brightness(1.3) contrast(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4))'
+                    filter: 'brightness(1.3) contrast(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4))',
+                    fontFamily: 'Arial, sans-serif'
                   }}
                 />
             </div>
             <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
-                {/* Focus Button - Show during DRAWING or DONE */}
-                {(status === 'DRAWING' || status === 'DONE') && (
-                    <button
-                        onClick={() => (window as any).__canvasFocus?.()}
-                        className="bg-cyan-500/20 hover:bg-cyan-500/30 backdrop-blur-md rounded-full p-1.5 sm:p-2 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-300 hover:drop-shadow-[0_0_6px_rgba(34,211,238,0.5)] active:scale-90"
-                        title="Focus on current drawing"
-                        aria-label="Focus on current drawing"
-                    >
-                        <FocusIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
-                    </button>
-                )}
-
-                <div className="flex items-center gap-2 sm:gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-3 py-1.5 sm:px-4 text-xs sm:text-sm text-gray-500 shadow-lg">
-                    <span className="hidden md:inline">Research Preview</span>
-                    <div className="w-px h-4 bg-white/20 hidden md:block"></div>
-                    <a href="mailto:team@dodgysoft.dev" target="_blank" rel="noopener noreferrer" title="Email Us" aria-label="Email Us" className="text-gray-500 hover:text-cyan-400 transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(34,211,238,0.8)] active:scale-95">
-                        <MailIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </a>
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View on GitHub" className="text-gray-500 hover:text-white transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)] active:scale-95">
-                        <GithubIcon className="w-4 h-4 sm:w-5 sm:h-5" />
-                    </a>
+                <div className="flex items-center gap-2 sm:gap-3 bg-gradient-to-r from-gray-800/60 to-gray-700/60 backdrop-blur-2xl border border-gray-600/40 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-xl" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    <span className="text-xs sm:text-sm text-gray-300 font-medium">Research Preview</span>
+                    {(status === 'DRAWING' || status === 'DONE') && (
+                        <>
+                            <div className="w-px h-4 bg-gray-500/50"></div>
+                            <button
+                                onClick={() => (window as any).__canvasFocus?.()}
+                                className="group flex items-center gap-1.5 text-gray-300 hover:text-[#1F51FF] transition-all duration-300 active:scale-95"
+                                title="Focus on current drawing"
+                                aria-label="Focus on current drawing"
+                            >
+                                <FocusIcon className="w-4 h-4 sm:w-4.5 sm:h-4.5 group-hover:drop-shadow-[0_0_6px_rgba(31,81,255,0.6)]" />
+                                <span className="text-xs sm:text-sm font-medium hidden sm:inline">Focus</span>
+                            </button>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

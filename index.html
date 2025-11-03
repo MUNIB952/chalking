@@ -63,6 +63,36 @@
       .fade-mask-x-strong {
         mask-image: linear-gradient(to right, transparent 0%, black 5%, black 80%, transparent 100%);
       }
+
+      /* Premium animations */
+      @keyframes slideUp {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
     </style>
   <script type="importmap">
 {
