@@ -6,10 +6,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Drawing Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400..700&display=swap" rel="stylesheet">
     <style>
+      /* Self-hosted Caveat font - prevents font flash (FOUT) */
+      @font-face {
+        font-family: 'Caveat';
+        font-style: normal;
+        font-weight: 400;
+        font-display: block; /* Prevents flash of unstyled text */
+        src: url('/fonts/Caveat-Regular.ttf') format('truetype');
+      }
+
+      @font-face {
+        font-family: 'Caveat';
+        font-style: normal;
+        font-weight: 600;
+        font-display: block;
+        src: url('/fonts/Caveat-SemiBold.ttf') format('truetype');
+      }
+
+      @font-face {
+        font-family: 'Caveat';
+        font-style: normal;
+        font-weight: 700;
+        font-display: block;
+        src: url('/fonts/Caveat-Bold.ttf') format('truetype');
+      }
+
       html, body, #root {
         height: 100%;
         width: 100%;
