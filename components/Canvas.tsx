@@ -664,6 +664,41 @@ export const Canvas: React.FC<CanvasProps> = ({
     
   }, [currentStep, animationProgress, status, isPanning, isPaused]);
 
+  // Handle wheel events with passive: false to allow preventDefault
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const handleWheelNative = (e: WheelEvent) => {
+      if (!isInteractive) return;
+      e.preventDefault();
+
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      const zoomFactor = 1.1;
+      const newZoom = e.deltaY < 0 ? viewTransform.zoom * zoomFactor : viewTransform.zoom / zoomFactor;
+      const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+
+      if (clampedZoom === viewTransform.zoom) return;
+
+      const worldX = (mouseX - viewTransform.x) / viewTransform.zoom;
+      const worldY = (mouseY - viewTransform.y) / viewTransform.zoom;
+
+      const newX = mouseX - worldX * clampedZoom;
+      const newY = mouseY - worldY * clampedZoom;
+
+      setViewTransform({ x: newX, y: newY, zoom: clampedZoom });
+    };
+
+    canvas.addEventListener('wheel', handleWheelNative, { passive: false });
+
+    return () => {
+      canvas.removeEventListener('wheel', handleWheelNative);
+    };
+  }, [isInteractive, viewTransform]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!isInteractive) return;
     setIsPanning(true);
@@ -686,30 +721,6 @@ export const Canvas: React.FC<CanvasProps> = ({
     setIsPanning(false);
   }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (!isInteractive) return;
-    e.preventDefault();
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const zoomFactor = 1.1;
-    const newZoom = e.deltaY < 0 ? viewTransform.zoom * zoomFactor : viewTransform.zoom / zoomFactor;
-    const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-    
-    if(clampedZoom === viewTransform.zoom) return;
-
-    const worldX = (mouseX - viewTransform.x) / viewTransform.zoom;
-    const worldY = (mouseY - viewTransform.y) / viewTransform.zoom;
-    
-    const newX = mouseX - worldX * clampedZoom;
-    const newY = mouseY - worldY * clampedZoom;
-
-    setViewTransform({ x: newX, y: newY, zoom: clampedZoom });
-  }, [isInteractive, viewTransform]);
-
   return (
     <div className="w-full h-full relative" onMouseLeave={handleMouseUp} onMouseUp={handleMouseUp} >
         <canvas
@@ -717,7 +728,6 @@ export const Canvas: React.FC<CanvasProps> = ({
             className={`w-full h-full ${cursorClass}`}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
-            onWheel={handleWheel}
             role="img"
             aria-label={explanation}
         />
