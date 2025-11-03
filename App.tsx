@@ -5,7 +5,7 @@ import { Canvas } from './components/Canvas';
 import { Controls } from './components/Controls';
 import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
-import { MailIcon, GithubIcon } from './components/icons';
+import { MailIcon, GithubIcon, FocusIcon } from './components/icons';
 import { RateLimiter } from './utils/rateLimiter';
 
 // This is the code that will run in the background thread to avoid blocking the UI.
@@ -453,28 +453,41 @@ const App: React.FC = () => {
   }, [status, currentStepIndex, whiteboardSteps, isPaused]);
 
   return (
-    <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative">
-        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pointer-events-none">
-            <div className="pointer-events-auto">
+    <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 flex justify-between items-center z-10 pointer-events-none">
+            <div className="pointer-events-auto bg-white/10 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-white/20">
                 <img
                   src="/icons.png"
                   alt="AI Drawing Assistant Logo"
-                  className="h-12 w-auto object-contain max-h-16"
+                  className="h-8 sm:h-10 w-auto object-contain"
                   style={{
-                    imageRendering: 'auto',
-                    filter: 'drop-shadow(0 0 2px rgba(255, 255, 255, 0.3))'
+                    imageRendering: 'crisp-edges',
+                    maxWidth: '150px',
+                    filter: 'brightness(1.2) contrast(1.1)'
                   }}
                 />
             </div>
-            <div className="pointer-events-auto">
-                <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-sm text-gray-500 shadow-lg">
-                    <span>Research Preview</span>
-                    <div className="w-px h-4 bg-white/20"></div>
-                    <a href="mailto:team@dodgysoft.dev" target="_blank" rel="noopener noreferrer" title="Email Us" className="text-gray-500 hover:text-cyan-400 transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(34,211,238,0.8)]">
-                        <MailIcon className="w-5 h-5" />
+            <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
+                {/* Focus Button - Show during DRAWING or DONE */}
+                {(status === 'DRAWING' || status === 'DONE') && (
+                    <button
+                        onClick={() => (window as any).__canvasFocus?.()}
+                        className="bg-cyan-500/20 hover:bg-cyan-500/30 backdrop-blur-md rounded-full p-2 sm:p-2.5 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] active:scale-95"
+                        title="Focus on current drawing"
+                        aria-label="Focus on current drawing"
+                    >
+                        <FocusIcon className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+                    </button>
+                )}
+
+                <div className="flex items-center gap-2 sm:gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-3 py-1.5 sm:px-4 text-xs sm:text-sm text-gray-500 shadow-lg">
+                    <span className="hidden md:inline">Research Preview</span>
+                    <div className="w-px h-4 bg-white/20 hidden md:block"></div>
+                    <a href="mailto:team@dodgysoft.dev" target="_blank" rel="noopener noreferrer" title="Email Us" aria-label="Email Us" className="text-gray-500 hover:text-cyan-400 transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(34,211,238,0.8)] active:scale-95">
+                        <MailIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </a>
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" title="View on GitHub" className="text-gray-500 hover:text-white transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">
-                        <GithubIcon className="w-5 h-5" />
+                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" title="View on GitHub" aria-label="View on GitHub" className="text-gray-500 hover:text-white transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)] active:scale-95">
+                        <GithubIcon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </a>
                 </div>
             </div>
@@ -488,6 +501,7 @@ const App: React.FC = () => {
             isPaused={isPaused}
             key={canvasKey}
             explanation={explanation}
+            onFocusRequest
         />
         <Controls
             status={status}

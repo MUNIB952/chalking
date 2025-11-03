@@ -11,6 +11,7 @@ interface CanvasProps {
   isPaused: boolean;
   key: number; // To force re-mount and reset
   explanation: string;
+  onFocusRequest?: () => void;
 }
 
 type AllDrawableItem = (DrawingCommand | Annotation) & { stepOrigin: Point };
@@ -389,6 +390,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   animationProgress,
   isPaused,
   explanation,
+  onFocusRequest
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, zoom: 1 });
@@ -396,7 +398,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   const lastPanPoint = useRef({ x: 0, y: 0 });
   const penTipPosition = useRef<Point | null>(null);
 
-  const isInteractive = useMemo(() => status !== 'THINKING' && status !== 'DRAWING' && status !== 'PREPARING', [status]);
+  // Always allow interaction during DRAWING and DONE, disable only during THINKING/PREPARING
+  const isInteractive = useMemo(() => status !== 'THINKING' && status !== 'PREPARING', [status]);
   const cursorClass = isPanning ? 'grabbing-cursor' : (isInteractive ? 'grab-cursor' : 'wait-cursor');
   
   const showLoader = useMemo(() => status === 'THINKING' || status === 'PREPARING', [status]);
@@ -615,7 +618,31 @@ export const Canvas: React.FC<CanvasProps> = ({
     frameId = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(frameId);
   }, [drawCanvas]);
-  
+
+  // Focus handler - centers view on current drawing area
+  const handleFocus = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !currentStep) return;
+
+    setIsPanning(false); // Stop any ongoing pan
+
+    const rect = canvas.getBoundingClientRect();
+    const focalPoint = penTipPosition.current || currentStep.origin;
+
+    if (focalPoint) {
+      const targetX = rect.width / 2 - (focalPoint as AbsolutePoint).x * viewTransform.zoom;
+      const targetY = rect.height / 2 - (focalPoint as AbsolutePoint).y * viewTransform.zoom;
+      setViewTransform(prev => ({ ...prev, x: targetX, y: targetY }));
+    }
+  }, [currentStep, viewTransform.zoom]);
+
+  // Expose focus handler to parent
+  useEffect(() => {
+    if (onFocusRequest) {
+      (window as any).__canvasFocus = handleFocus;
+    }
+  }, [handleFocus, onFocusRequest]);
+
   useEffect(() => {
     if (!currentStep || status !== 'DRAWING' || isPaused) {
       penTipPosition.current = null;
