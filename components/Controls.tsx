@@ -155,7 +155,7 @@ export const Controls: React.FC<ControlsProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., Explain how a transformer model works"
                 disabled={isInputDisabled}
-                className="w-full bg-slate-900/80 border border-slate-600 rounded-lg py-3 pl-4 pr-12 text-white placeholder-slate-400 focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition"
+                className="w-full bg-slate-900/80 border border-slate-600 rounded-lg py-3 pl-4 pr-12 text-white placeholder-slate-400 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400/50 transition-all selection:bg-cyan-400/30 selection:text-white"
                 aria-label="Enter your prompt"
               />
               <button
