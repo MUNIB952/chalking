@@ -439,7 +439,7 @@ const App: React.FC = () => {
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative">
         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pointer-events-none">
             <div className="pointer-events-auto">
-                <img src="/icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto" />
+                <img src="/icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto object-contain" style={{ imageRendering: 'auto' }} />
             </div>
             <div className="pointer-events-auto">
                 <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-sm text-gray-500 shadow-lg">
