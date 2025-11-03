@@ -295,9 +295,15 @@ const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, an
 
   const drawItem = (item: DrawingCommand | Annotation, progress: number) => {
       let itemColor = item.color || defaultColor;
-      
-      const forbiddenColors = ['#000000', '#0a0a0a', '#18181b', '#333333'];
+
+      // Expanded forbidden colors list - all black and very dark colors are prohibited
+      const forbiddenColors = [
+        '#000000', '#0a0a0a', '#18181b', '#333333', '#000',
+        '#111111', '#222222', '#1a1a1a', '#0d0d0d', '#050505',
+        'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)'
+      ];
       if (forbiddenColors.includes(itemColor.toLowerCase())) {
+          console.warn(`Forbidden color detected: ${itemColor}. Replacing with white.`);
           itemColor = defaultColor;
       }
 
@@ -675,15 +681,19 @@ export const Canvas: React.FC<CanvasProps> = ({
 
       if (focalPoint) {
           setViewTransform(prev => {
+              // Responsive smoothing: faster on mobile for snappier tracking
+              const isMobile = rect.width < 640; // sm breakpoint
+              const smoothingFactor = isMobile ? 0.12 : 0.08;
+
               const targetX = rect.width / 2 - (focalPoint as AbsolutePoint).x * prev.zoom;
               const targetY = rect.height / 2 - (focalPoint as AbsolutePoint).y * prev.zoom;
 
               const dx = targetX - prev.x;
               const dy = targetY - prev.y;
 
-              const newX = (Math.abs(dx) < 1) ? targetX : prev.x + dx * 0.08;
-              const newY = (Math.abs(dy) < 1) ? targetY : prev.y + dy * 0.08;
-              
+              const newX = (Math.abs(dx) < 1) ? targetX : prev.x + dx * smoothingFactor;
+              const newY = (Math.abs(dy) < 1) ? targetY : prev.y + dy * smoothingFactor;
+
               return { ...prev, x: newX, y: newY };
           });
       }

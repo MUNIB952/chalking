@@ -455,7 +455,7 @@ const App: React.FC = () => {
   return (
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 flex justify-between items-center z-10 pointer-events-none">
-            <div className="pointer-events-auto bg-white/10 backdrop-blur-md rounded-lg px-2 py-1.5 sm:px-3 sm:py-2 border border-white/20">
+            <div className="pointer-events-auto">
                 <img
                   src="/icons.png"
                   alt="AI Drawing Assistant Logo"
@@ -463,7 +463,7 @@ const App: React.FC = () => {
                   style={{
                     imageRendering: 'crisp-edges',
                     maxWidth: '150px',
-                    filter: 'brightness(1.2) contrast(1.1)'
+                    filter: 'brightness(1.3) contrast(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4))'
                   }}
                 />
             </div>
@@ -472,11 +472,11 @@ const App: React.FC = () => {
                 {(status === 'DRAWING' || status === 'DONE') && (
                     <button
                         onClick={() => (window as any).__canvasFocus?.()}
-                        className="bg-cyan-500/20 hover:bg-cyan-500/30 backdrop-blur-md rounded-full p-2 sm:p-2.5 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-300 hover:drop-shadow-[0_0_8px_rgba(34,211,238,0.6)] active:scale-95"
+                        className="bg-cyan-500/20 hover:bg-cyan-500/30 backdrop-blur-md rounded-full p-1.5 sm:p-2 border border-cyan-500/30 hover:border-cyan-500/50 transition-all duration-300 hover:drop-shadow-[0_0_6px_rgba(34,211,238,0.5)] active:scale-90"
                         title="Focus on current drawing"
                         aria-label="Focus on current drawing"
                     >
-                        <FocusIcon className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
+                        <FocusIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-cyan-400" />
                     </button>
                 )}
 
