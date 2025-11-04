@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { PROMPTS } from '../constants';
 import { AppStatus, WhiteboardStep } from '../types';
 import {
-  ExpandIcon, CollapseIcon, RepeatIcon, MuteIcon, UnmuteIcon, SendIcon
+  ExpandIcon, CollapseIcon, RepeatIcon, MuteIcon, UnmuteIcon, SendIcon, PlayIcon, PauseIcon
 } from './icons';
 
 interface ControlsProps {
@@ -166,6 +166,9 @@ export const Controls: React.FC<ControlsProps> = ({
             <ControlButton onClick={onRepeat}>
               <RepeatIcon />
             </ControlButton>
+            <ControlButton onClick={onTogglePause}>
+              {isPaused ? <PlayIcon /> : <PauseIcon />}
+            </ControlButton>
             <ControlButton onClick={() => setIsMuted(!isMuted)}>
               {isMuted ? <MuteIcon /> : <UnmuteIcon />}
             </ControlButton>
@@ -177,7 +180,7 @@ export const Controls: React.FC<ControlsProps> = ({
 
         {/* Collapsible Content */}
         <div className={`transition-all duration-500 ease-in-out grid ${isExpanded ? 'grid-rows-[1fr] opacity-100 pt-1.5' : 'grid-rows-[0fr] opacity-0'}`}>
-          <div className="overflow-hidden">
+          <div className="overflow-hidden min-h-0">
 
             {/* Row 2: Transcript - Only during DRAWING */}
             {showTranscript && explanation && (

@@ -633,7 +633,12 @@ export const Canvas: React.FC<CanvasProps> = ({
       for (let i = 0; i < currentStepIndex; i++) {
         const step = resolvedSteps[i];
         if (step) {
-          drawStepContent(ctx, step, 1, currentStepItemIds);
+          // Only exclude items if this step shares the same origin as current step
+          // This prevents re-drawing items during Conceptual Pivot but allows Addition steps to show fully
+          const sharesOrigin = currentStep &&
+            step.origin.x === currentStep.origin.x &&
+            step.origin.y === currentStep.origin.y;
+          drawStepContent(ctx, step, 1, sharesOrigin ? currentStepItemIds : undefined);
         }
       }
 
