@@ -115,7 +115,7 @@ const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotat
     ctx.font = `400 ${fontSize}px Caveat, cursive`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     ctx.save();
 
     if (isContextual) {
@@ -123,22 +123,65 @@ const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotat
         ctx.globalAlpha *= 0.6;
         ctx.fillText(text, x, y);
     } else {
-        // Original animation logic for new labels
+        // Character-by-character writing animation
         const animationCompletionPoint = 0.4;
         const easedProgress = Math.min(1, progress / animationCompletionPoint);
         if (easedProgress <= 0) {
-          ctx.restore(); // must restore even if we draw nothing
+          ctx.restore();
           return;
         }
 
-        const finalProgress = 1 - Math.pow(1 - easedProgress, 3);
-        const currentScale = 0.8 + (0.2 * finalProgress); // from 0.8 to 1.0
-        const currentAlpha = finalProgress;
+        // Calculate how many characters to show
+        const totalChars = text.length;
+        const charsToShow = Math.floor(easedProgress * totalChars);
 
-        ctx.globalAlpha *= currentAlpha;
-        ctx.translate(x, y);
-        ctx.scale(currentScale, currentScale);
-        ctx.fillText(text, 0, 0);
+        if (charsToShow === 0) {
+          ctx.restore();
+          return;
+        }
+
+        // Get the visible portion of text
+        const visibleText = text.substring(0, charsToShow);
+
+        // Calculate position to center the full text (not just visible portion)
+        const fullWidth = ctx.measureText(text).width;
+        const startX = x - fullWidth / 2;
+
+        ctx.textAlign = 'left';
+
+        // Draw each character with individual fade-in effect
+        let currentX = startX;
+        for (let i = 0; i < charsToShow; i++) {
+            const char = text[i];
+            const charProgress = (charsToShow - i) / 3; // Recent chars are more faded
+            const charAlpha = Math.min(1, 0.3 + charProgress * 0.7);
+
+            ctx.save();
+            ctx.globalAlpha *= charAlpha;
+
+            // Slight fade-in and upward movement for last few characters
+            if (i >= charsToShow - 3) {
+                const recentCharProgress = (charsToShow - i) / 3;
+                const fadeIn = 0.4 + (recentCharProgress * 0.6);
+                const offsetY = (1 - recentCharProgress) * 3;
+                ctx.globalAlpha *= fadeIn;
+                ctx.fillText(char, currentX, y - offsetY);
+            } else {
+                ctx.fillText(char, currentX, y);
+            }
+
+            ctx.restore();
+            currentX += ctx.measureText(char).width;
+        }
+
+        // Draw a subtle writing cursor at the end (only during active writing)
+        if (charsToShow < totalChars && easedProgress < 0.95) {
+            ctx.save();
+            const cursorAlpha = 0.4 + (Math.sin(Date.now() / 150) * 0.3); // Blinking effect
+            ctx.globalAlpha *= cursorAlpha;
+            ctx.fillText('|', currentX, y);
+            ctx.restore();
+        }
     }
 
     ctx.restore();
