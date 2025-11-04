@@ -137,11 +137,11 @@ export const Controls: React.FC<ControlsProps> = ({
 
   return (
     <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-3xl md:w-auto md:min-w-[700px]">
-      <div className="bg-neutral-900 rounded-2xl p-2 sm:p-3 transition-all duration-300 hover:shadow-[0_0_20px_0px_rgba(255,255,255,0.05)]">
+      <div className="bg-neutral-900 rounded-2xl p-2 transition-all duration-300 hover:shadow-[0_0_20px_0px_rgba(255,255,255,0.05)]">
 
         {/* Row 1: Progress Bar (LEFT) or Prompts (LEFT) + Buttons (RIGHT) */}
-        <div className="flex items-center justify-between h-14">
-          <div className="flex-1 mr-4 pl-2 min-w-0">
+        <div className="flex items-center justify-between h-12">
+          <div className="flex-1 mr-2 pl-1 min-w-0">
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
             ) : showProgress ? (
@@ -162,7 +162,7 @@ export const Controls: React.FC<ControlsProps> = ({
           </div>
 
           {/* Control Buttons - RIGHT */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+          <div className="flex items-center gap-1 flex-shrink-0">
             <ControlButton onClick={onRepeat}>
               <RepeatIcon />
             </ControlButton>
@@ -176,12 +176,12 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
 
         {/* Collapsible Content */}
-        <div className={`transition-all duration-500 ease-in-out grid ${isExpanded ? 'grid-rows-[1fr] opacity-100 pt-2' : 'grid-rows-[0fr] opacity-0'}`}>
+        <div className={`transition-all duration-500 ease-in-out grid ${isExpanded ? 'grid-rows-[1fr] opacity-100 pt-1.5' : 'grid-rows-[0fr] opacity-0'}`}>
           <div className="overflow-hidden">
 
             {/* Row 2: Transcript - Only during DRAWING */}
             {showTranscript && explanation && (
-              <div className="mb-3 px-1">
+              <div className="mb-2 px-1">
                 <p className="text-sm text-neutral-400 leading-relaxed">{explanation}</p>
                 {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
               </div>

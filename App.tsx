@@ -467,24 +467,23 @@ const App: React.FC = () => {
                   }}
                 />
             </div>
-            <div className="pointer-events-auto flex items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 sm:gap-3 bg-gray-900/60 backdrop-blur-xl border border-gray-700/50 rounded-full px-3 sm:px-4 py-1.5 sm:py-2 shadow-lg" style={{ fontFamily: 'Arial, sans-serif' }}>
-                    <span className="text-xs sm:text-sm text-gray-400">Research Preview</span>
-                    {(status === 'DRAWING' || status === 'DONE') && (
-                        <>
-                            <div className="w-px h-4 bg-gray-700"></div>
-                            <button
-                                onClick={() => (window as any).__canvasFocus?.()}
-                                className="flex items-center gap-1.5 text-gray-400 hover:text-white transition-colors duration-200"
-                                title="Focus on current drawing"
-                                aria-label="Focus on current drawing"
-                            >
-                                <FocusIcon className="w-4 h-4" style={{ color: '#1F51FF' }} />
-                                <span className="text-xs sm:text-sm hidden sm:inline">Focus</span>
-                            </button>
-                        </>
-                    )}
+            <div className="pointer-events-auto flex items-center gap-2">
+                {/* Research Preview Badge */}
+                <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl border border-neutral-800 rounded-lg px-3 py-1.5" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    <span className="text-xs text-neutral-500">Research Preview</span>
                 </div>
+
+                {/* Focus Button */}
+                {(status === 'DRAWING' || status === 'DONE') && (
+                    <button
+                        onClick={() => (window as any).__canvasFocus?.()}
+                        className="p-2 w-10 h-10 flex items-center justify-center rounded-lg bg-black/50 backdrop-blur-xl border border-neutral-800 text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95"
+                        title="Focus on current drawing"
+                        aria-label="Focus on current drawing"
+                    >
+                        <FocusIcon className="w-5 h-5" style={{ color: '#1F51FF' }} />
+                    </button>
+                )}
             </div>
         </div>
 
