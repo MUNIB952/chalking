@@ -70,12 +70,14 @@ const App: React.FC = () => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [canvasKey, setCanvasKey] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // --- Audio & Animation Engine Refs ---
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioWorkerRef = useRef<Worker | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const audioBuffersRef = useRef<(AudioBuffer | null)[]>([]);
+  const gainNodeRef = useRef<GainNode | null>(null);
 
   const stepTimeoutRef = useRef<number | null>(null);
   const statusMessageIntervalRef = useRef<number | null>(null);
@@ -112,6 +114,11 @@ const App: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Create gain node for volume control (mute functionality)
+      if (audioContextRef.current) {
+        gainNodeRef.current = audioContextRef.current.createGain();
+        gainNodeRef.current.connect(audioContextRef.current.destination);
+      }
     }
     const blob = new Blob([audioWorkerCode], { type: 'application/javascript' });
     const worker = new Worker(URL.createObjectURL(blob));
@@ -321,14 +328,18 @@ const App: React.FC = () => {
   }, [currentStepIndex]);
 
   useEffect(() => {
+    // Check if we've completed all steps
+    if (status === 'DRAWING' && whiteboardSteps.length > 0 && currentStepIndex >= whiteboardSteps.length) {
+      setStatus('DONE');
+      setAnimationProgress(1); // Ensure final frame is fully drawn
+      if (overallExplanationRef.current) {
+        setExplanation(overallExplanationRef.current);
+      }
+      return;
+    }
+
     const currentStep = whiteboardSteps[currentStepIndex];
     if (status !== 'DRAWING' || !currentStep || isPaused) {
-      if (status === 'DRAWING' && whiteboardSteps.length > 0 && currentStepIndex >= whiteboardSteps.length) {
-        setStatus('DONE');
-        if (overallExplanationRef.current) {
-          setExplanation(overallExplanationRef.current);
-        }
-      }
       return;
     }
 
@@ -418,10 +429,10 @@ const App: React.FC = () => {
       stepTimeoutRef.current = window.setTimeout(completeAndAdvance, remainingDurationMs + 100);
 
       // Play THIS step's audio (each step has its own audio file)
-      if (buffer && audioContextRef.current && !audioSourceRef.current) {
+      if (buffer && audioContextRef.current && gainNodeRef.current && !audioSourceRef.current) {
         const source = audioContextRef.current.createBufferSource();
         source.buffer = buffer;
-        source.connect(audioContextRef.current.destination);
+        source.connect(gainNodeRef.current); // Connect to gain node for mute control
 
         // If resuming from pause, start from where we paused within THIS audio file
         const startOffset = startProgress * buffer.duration;
@@ -451,6 +462,17 @@ const App: React.FC = () => {
       }
     };
   }, [status, currentStepIndex, whiteboardSteps, isPaused]);
+
+  // Handle mute/unmute
+  useEffect(() => {
+    if (gainNodeRef.current) {
+      gainNodeRef.current.gain.value = isMuted ? 0 : 1;
+    }
+  }, [isMuted]);
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted(prev => !prev);
+  }, []);
 
   return (
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
@@ -504,9 +526,11 @@ const App: React.FC = () => {
             steps={whiteboardSteps}
             currentStepIndex={currentStepIndex}
             isPaused={isPaused}
+            isMuted={isMuted}
             onSubmit={handleSubmit}
             onRepeat={handleRepeat}
             onTogglePause={handleTogglePause}
+            onToggleMute={handleToggleMute}
         />
     </div>
   );

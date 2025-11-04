@@ -84,6 +84,7 @@ export type DrawingCommand = RectangleCommand | CircleCommand | PathCommand;
 
 export type WhiteboardStep = {
   origin: AbsolutePoint;
+  stepName: string; // Short name for this step (displayed above progress bar)
   explanation: string;
   drawingPlan: DrawingCommand[] | null;
   annotations: Annotation[];

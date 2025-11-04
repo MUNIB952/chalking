@@ -14,9 +14,11 @@ interface ControlsProps {
   steps: WhiteboardStep[];
   currentStepIndex: number;
   isPaused: boolean;
+  isMuted: boolean;
   onSubmit: (prompt: string) => void;
   onRepeat: () => void;
   onTogglePause: () => void;
+  onToggleMute: () => void;
 }
 
 // --- AnimatedPrompts component ---
@@ -96,12 +98,13 @@ export const Controls: React.FC<ControlsProps> = ({
   steps,
   currentStepIndex,
   isPaused,
+  isMuted,
   onSubmit,
   onRepeat,
   onTogglePause,
+  onToggleMute,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [isMuted, setIsMuted] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -109,6 +112,8 @@ export const Controls: React.FC<ControlsProps> = ({
   const showIdleState = status === 'IDLE' || status === 'DONE' || status === 'ERROR';
   const showProgress = status === 'DRAWING' || status === 'DONE';
   const showTranscript = status === 'DRAWING';
+
+  const currentStepName = steps[currentStepIndex]?.stepName || '';
 
   const handlePromptClick = (prompt: string) => {
     setInputValue(prompt);
@@ -145,7 +150,14 @@ export const Controls: React.FC<ControlsProps> = ({
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
             ) : showProgress ? (
-              <div className="flex items-center h-8">
+              <div className="flex flex-col justify-center h-8 space-y-0.5">
+                {/* Step Name */}
+                {currentStepName && (
+                  <div className="text-xs text-neutral-400 truncate">
+                    {currentStepName}
+                  </div>
+                )}
+                {/* Progress Bar */}
                 <div className="w-full max-w-md">
                   <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                     <div
@@ -169,7 +181,7 @@ export const Controls: React.FC<ControlsProps> = ({
             <ControlButton onClick={onTogglePause}>
               {isPaused ? <PlayIcon /> : <PauseIcon />}
             </ControlButton>
-            <ControlButton onClick={() => setIsMuted(!isMuted)}>
+            <ControlButton onClick={onToggleMute}>
               {isMuted ? <MuteIcon /> : <UnmuteIcon />}
             </ControlButton>
             <ControlButton onClick={() => setIsExpanded(!isExpanded)}>
