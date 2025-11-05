@@ -95,7 +95,7 @@ export default async function handler(req, res) {
         }],
         generationConfig: {
           responseMimeType: 'application/json',
-          maxOutputTokens: 60000,
+          maxOutputTokens: 8192,  // Max for Gemini 2.0 Flash
           temperature: 0.7,
         }
       })
