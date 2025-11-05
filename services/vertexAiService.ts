@@ -1,6 +1,6 @@
 /**
- * Vertex AI Service for Google Cloud Platform (REST API)
- * Uses direct REST API calls to Vertex AI - works in the browser
+ * Vertex AI Service for Google Cloud Platform (Serverless)
+ * Calls Vercel serverless functions which use Service Account authentication
  * This service uses your GCP project credits/billing instead of free tier quotas
  */
 
@@ -8,57 +8,32 @@ import { AIResponse } from '../types';
 import { robustJsonParse, fullPromptTemplate, QUOTA_ERROR_MESSAGE } from './geminiService';
 
 /**
- * Generate initial visual plan using Vertex AI Gemini REST API
+ * Generate initial visual plan using Vertex AI via Vercel serverless function
  */
 export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
   try {
-    const projectId = import.meta.env.VITE_GCP_PROJECT_ID;
-    const location = import.meta.env.VITE_GCP_LOCATION || 'us-central1';
-    const apiKey = import.meta.env.VITE_VERTEX_API_KEY;
-
-    if (!projectId) {
-      throw new Error('VITE_GCP_PROJECT_ID is required for Vertex AI. Please set it in your .env file.');
-    }
-
-    if (!apiKey) {
-      throw new Error('VITE_VERTEX_API_KEY is required for Vertex AI. Please set it in your .env file.');
-    }
-
     const fullPrompt = fullPromptTemplate(prompt);
 
-    // Use Vertex AI REST API endpoint
-    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.0-flash-exp:generateContent`;
+    console.log('🚀 Calling Vertex AI via serverless function');
 
-    console.log('🚀 Calling Vertex AI API:', endpoint);
-
-    const response = await fetch(endpoint, {
+    // Call Vercel serverless function
+    const response = await fetch('/api/generate-plan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
       },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{ text: fullPrompt }]
-        }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 60000,
-          temperature: 0.7,
-        }
-      })
+      body: JSON.stringify({ prompt: fullPrompt })
     });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('Vertex AI API Error:', errorData);
+      console.error('Serverless function error:', errorData);
 
       if (response.status === 429) {
         throw new Error(QUOTA_ERROR_MESSAGE);
       }
 
-      throw new Error(`Vertex AI API error: ${errorData.error?.message || 'Unknown error'}`);
+      throw new Error(`Vertex AI error: ${errorData.error?.message || 'Unknown error'}`);
     }
 
     const data = await response.json();
@@ -92,51 +67,27 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 };
 
 /**
- * Generate speech using Google Cloud Text-to-Speech API
- * This is billed separately from Gemini/Vertex AI
+ * Generate speech using Cloud TTS via Vercel serverless function
  */
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
   try {
-    const apiKey = import.meta.env.VITE_VERTEX_API_KEY;
-
-    if (!apiKey) {
-      console.error('Missing VITE_VERTEX_API_KEY for TTS');
-      return null;
-    }
-
-    console.log('🎤 Generating speech with Cloud TTS for text:', text.substring(0, 100) + '...');
+    console.log('🎤 Generating speech with Cloud TTS via serverless function');
     console.log('  Text length:', text.length, 'characters');
 
-    // Use Cloud Text-to-Speech API
-    const response = await fetch(
-      `https://texttospeech.googleapis.com/v1/text:synthesize?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          input: { text },
-          voice: {
-            languageCode: 'en-US',
-            name: 'en-US-Neural2-J', // Male voice
-            ssmlGender: 'MALE'
-          },
-          audioConfig: {
-            audioEncoding: 'LINEAR16',
-            sampleRateHertz: 24000,
-            pitch: 0,
-            speakingRate: 1.0
-          }
-        })
-      }
-    );
+    // Call Vercel serverless function
+    const response = await fetch('/api/generate-speech', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ text })
+    });
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('TTS API Error:', errorData);
+      console.error('TTS serverless function error:', errorData);
       return null;
     }
 
