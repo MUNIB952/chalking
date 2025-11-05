@@ -21,10 +21,27 @@ export default async function handler(req, res) {
   }
 
   try {
+    console.log('📥 Request received:', {
+      method: req.method,
+      bodyType: typeof req.body,
+      bodyKeys: req.body ? Object.keys(req.body) : [],
+      hasPrompt: !!req.body?.prompt,
+      promptType: typeof req.body?.prompt,
+      promptLength: req.body?.prompt?.length || 0
+    });
+
     const { prompt } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
-      return res.status(400).json({ error: 'Prompt is required' });
+      console.error('❌ Invalid prompt:', { prompt, type: typeof prompt, body: req.body });
+      return res.status(400).json({
+        error: 'Prompt is required',
+        debug: {
+          receivedType: typeof prompt,
+          bodyKeys: req.body ? Object.keys(req.body) : [],
+          bodyPreview: JSON.stringify(req.body).substring(0, 200)
+        }
+      });
     }
 
     const projectId = process.env.GCP_PROJECT_ID;
@@ -32,11 +49,31 @@ export default async function handler(req, res) {
     const serviceAccountJson = process.env.GCP_SERVICE_ACCOUNT_JSON;
 
     if (!projectId || !serviceAccountJson) {
-      console.error('Missing required environment variables');
-      return res.status(500).json({ error: 'Server configuration error' });
+      console.error('❌ Missing required environment variables:', {
+        hasProjectId: !!projectId,
+        hasServiceAccountJson: !!serviceAccountJson,
+        serviceAccountJsonLength: serviceAccountJson?.length || 0
+      });
+      return res.status(500).json({
+        error: 'Server configuration error',
+        debug: {
+          hasProjectId: !!projectId,
+          hasServiceAccountJson: !!serviceAccountJson
+        }
+      });
     }
 
-    const serviceAccount = JSON.parse(serviceAccountJson);
+    let serviceAccount;
+    try {
+      serviceAccount = JSON.parse(serviceAccountJson);
+      console.log('✅ Service account parsed successfully');
+    } catch (parseError) {
+      console.error('❌ Failed to parse service account JSON:', parseError);
+      return res.status(500).json({
+        error: 'Invalid service account configuration',
+        debug: parseError.message
+      });
+    }
 
     // Get OAuth2 access token
     const accessToken = await getAccessToken(serviceAccount);
