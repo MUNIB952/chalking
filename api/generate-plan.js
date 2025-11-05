@@ -78,8 +78,8 @@ export default async function handler(req, res) {
     // Get OAuth2 access token
     const accessToken = await getAccessToken(serviceAccount);
 
-    // Use Gemini 1.5 Pro (most stable, supports 8192 output tokens in Vertex AI)
-    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-1.5-pro:generateContent`;
+    // Use Gemini 2.0 Flash (available in Vertex AI, supports up to 8192 tokens)
+    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.0-flash-exp:generateContent`;
 
     console.log('✅ Calling Vertex AI from serverless function');
 
@@ -96,7 +96,7 @@ export default async function handler(req, res) {
         }],
         generationConfig: {
           responseMimeType: 'application/json',
-          maxOutputTokens: 8192,  // Gemini 1.5 Pro in Vertex AI supports up to 8192
+          maxOutputTokens: 8192,  // Gemini 2.0 Flash supports up to 8192
           temperature: 0.7,
         }
       })
