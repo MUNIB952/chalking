@@ -287,11 +287,30 @@ const App: React.FC = () => {
 
   const handleRepeat = useCallback(() => {
     if (whiteboardSteps.length === 0) return;
-    stopEverything();
+
+    // Soft reset: Stop current playback but preserve audio buffers
+    if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
+    if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+
+    if (audioSourceRef.current) {
+        try { audioSourceRef.current.stop(); } catch (e) { /* ignore */ }
+        audioSourceRef.current = null;
+    }
+
+    // Reset playback state WITHOUT clearing audio buffers or tracking
+    setIsPaused(false);
+    playbackOffsetRef.current = 0;
+    pausedProgressRef.current = 0;
+    setAnimationProgress(0);
+
+    // Reset to beginning and restart
     setCurrentStepIndex(0);
     setCanvasKey(prev => prev + 1);
     setStatus('DRAWING');
-  }, [whiteboardSteps, stopEverything]);
+
+    console.log('🔄 Repeating explanation with cached audio buffers');
+  }, [whiteboardSteps]);
   
   const handleTogglePause = useCallback(() => {
     if (status === 'DRAWING') {
