@@ -194,7 +194,10 @@ export const Controls: React.FC<ControlsProps> = ({
               {isPaused ? <PlayIcon /> : <PauseIcon />}
             </ControlButton>
             {/* Expand/Collapse - Always visible */}
-            <ControlButton onClick={() => setIsExpanded(!isExpanded)}>
+            <ControlButton onClick={() => {
+              console.log(`[COLLAPSE] Toggling expand: ${isExpanded} -> ${!isExpanded}`);
+              setIsExpanded(!isExpanded);
+            }}>
               {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
             </ControlButton>
           </div>

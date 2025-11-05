@@ -313,31 +313,42 @@ const App: React.FC = () => {
   }, [whiteboardSteps]);
   
   const handleTogglePause = useCallback(() => {
-    if (status === 'DRAWING') {
-      const willBePaused = !isPaused;
+    if (status !== 'DRAWING') return; // Only allow pause during DRAWING
 
-      if (willBePaused) {
-        // Pausing: Save current animation progress and stop this step's audio
-        pausedProgressRef.current = animationProgress;
-        pausedAtRef.current = performance.now();
+    const willBePaused = !isPaused;
+    console.log(`[PAUSE] Toggling pause: ${isPaused} -> ${willBePaused}`);
 
-        if (audioSourceRef.current) {
-          console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+    if (willBePaused) {
+      // PAUSING: Stop everything immediately
+      pausedProgressRef.current = animationProgress;
+      pausedAtRef.current = performance.now();
 
-          try {
-            audioSourceRef.current.stop();
-          } catch (e) {
-            console.log('Audio source already stopped');
-          }
-          audioSourceRef.current = null;
-        }
-      } else {
-        // Resuming: Log that we're resuming from saved progress
-        console.log(`Resuming from progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+      // Clear timeouts and animations
+      if (stepTimeoutRef.current) {
+        clearTimeout(stepTimeoutRef.current);
+        stepTimeoutRef.current = null;
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
       }
 
-      setIsPaused(willBePaused);
+      // Stop audio immediately
+      if (audioSourceRef.current) {
+        console.log(`[PAUSE] Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+        try {
+          audioSourceRef.current.stop();
+        } catch (e) {
+          console.log('[PAUSE] Audio source already stopped');
+        }
+        audioSourceRef.current = null;
+      }
+    } else {
+      // RESUMING: Just set the flag, useEffect will handle restart
+      console.log(`[PAUSE] Resuming from progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
     }
+
+    setIsPaused(willBePaused);
   }, [status, isPaused, animationProgress]);
   
   useEffect(() => {
@@ -485,12 +496,17 @@ const App: React.FC = () => {
   // Handle mute/unmute
   useEffect(() => {
     if (gainNodeRef.current) {
-      gainNodeRef.current.gain.value = isMuted ? 0 : 1;
+      const newValue = isMuted ? 0 : 1;
+      gainNodeRef.current.gain.value = newValue;
+      console.log(`[MUTE] Audio ${isMuted ? 'MUTED' : 'UNMUTED'} (gain: ${newValue})`);
     }
   }, [isMuted]);
 
   const handleToggleMute = useCallback(() => {
-    setIsMuted(prev => !prev);
+    setIsMuted(prev => {
+      console.log(`[MUTE] Toggling mute: ${prev} -> ${!prev}`);
+      return !prev;
+    });
   }, []);
 
   return (
