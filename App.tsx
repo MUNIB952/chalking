@@ -478,16 +478,16 @@ const App: React.FC = () => {
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 flex justify-between items-center z-10 pointer-events-none">
             <div className="pointer-events-auto">
-                <img
-                  src="/icons.png"
-                  alt="AI Drawing Assistant Logo"
-                  className="h-8 sm:h-10 w-auto object-contain"
+                <h1
+                  className="text-[1.75rem] sm:text-3xl font-bold tracking-tight"
                   style={{
-                    imageRendering: 'crisp-edges',
-                    maxWidth: '150px',
-                    filter: 'brightness(1.3) contrast(1.2) drop-shadow(0 0 4px rgba(255,255,255,0.4))'
+                    color: '#1F51FF',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    textShadow: '0 0 20px rgba(31, 81, 255, 0.3)'
                   }}
-                />
+                >
+                  DodgySoft
+                </h1>
             </div>
             <div className="pointer-events-auto flex items-center gap-2">
                 {/* Research Preview Badge */}

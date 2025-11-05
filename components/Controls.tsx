@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { PROMPTS } from '../constants';
 import { AppStatus, WhiteboardStep } from '../types';
@@ -33,30 +32,25 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
   const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
 
   const promptsWithLoop = useMemo(() => [...PROMPTS, PROMPTS[0]], []);
-  const itemHeight = 32; // h-8
+  const itemHeight = 32; // Corresponds to h-8 in Tailwind CSS
 
+  // Effect for the main animation interval
   useEffect(() => {
-    if (isPlaying && !isHovered) {
-      const interval = setInterval(() => {
-        setCurrentIndex(prev => prev + 1);
-      }, 2500);
-      return () => clearInterval(interval);
-    }
+    if (!isPlaying || isHovered) return;
+    const intervalId = setInterval(() => {
+      setCurrentIndex(prev => prev + 1);
+    }, 2500); // 2.5s per prompt
+    return () => clearInterval(intervalId);
   }, [isPlaying, isHovered]);
-
-  useEffect(() => {
-    if (currentIndex === 0 && !isTransitionEnabled) {
-      const timeout = setTimeout(() => {
-        setIsTransitionEnabled(true);
-      }, 50);
-      return () => clearTimeout(timeout);
-    }
-  }, [currentIndex, isTransitionEnabled]);
 
   const onTransitionEnd = () => {
     if (currentIndex >= PROMPTS.length) {
       setIsTransitionEnabled(false);
       setCurrentIndex(0);
+      // Use requestAnimationFrame to ensure the non-transitioned state is rendered
+      requestAnimationFrame(() => {
+        setIsTransitionEnabled(true);
+      });
     }
   };
 
@@ -80,7 +74,7 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
           <div key={`${prompt}-${index}`} className="h-8 flex items-center">
             <button
               onClick={() => onPromptClick(prompt)}
-              className="text-left text-xl transition-colors text-neutral-500 hover:text-white whitespace-nowrap"
+              className="text-left text-lg transition-colors text-neutral-400 hover:text-neutral-200 whitespace-nowrap"
             >
               {prompt}
             </button>
@@ -125,32 +119,40 @@ export const Controls: React.FC<ControlsProps> = ({
       e.preventDefault();
       if (!isInputDisabled && inputValue.trim()) {
         onSubmit(inputValue);
+        setInputValue(''); // Clear input after submission
       }
+    }
+  };
+
+  const handleSubmit = () => {
+    if (!isInputDisabled && inputValue.trim()) {
+      onSubmit(inputValue);
+      setInputValue(''); // Clear input after submission
     }
   };
 
   const progressPercentage = steps.length > 0 ? (status === 'DONE' ? 100 : ((currentStepIndex + 1) / steps.length) * 100) : 0;
 
-  const ControlButton: React.FC<{onClick: () => void, children: React.ReactNode}> = ({ onClick, children }) => (
+  const ControlButton: React.FC<{onClick: () => void, children: React.ReactNode, className?: string}> = ({ onClick, children, className }) => (
     <button
       onClick={onClick}
-      className="p-2 w-10 h-10 flex items-center justify-center rounded-lg bg-black text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95"
+      className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95 border border-neutral-800 hover:border-neutral-700 ${className || ''}`}
     >
       {children}
     </button>
   );
 
   return (
-    <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-3xl md:w-auto md:min-w-[700px]">
-      <div className="bg-neutral-900 rounded-2xl p-2 transition-all duration-300 hover:shadow-[0_0_20px_0px_rgba(255,255,255,0.05)]">
+    <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px]">
+      <div className="bg-[#101010] border border-[#1F51FF]/50 hover:border-[#1F51FF] rounded-2xl p-1 sm:p-2 transition-all duration-300">
 
-        {/* Row 1: Progress Bar (LEFT) or Prompts (LEFT) + Buttons (RIGHT) */}
-        <div className="flex items-center justify-between h-12">
-          <div className="flex-1 mr-2 pl-1 min-w-0">
+        {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
+        <div className="flex items-center justify-between h-14">
+          <div className="flex-1 mr-4 pl-2 min-w-0">
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
             ) : showProgress ? (
-              <div className="flex flex-col justify-center h-8 space-y-0.5">
+              <div className="flex flex-col justify-center h-10 space-y-1">
                 {/* Step Name */}
                 {currentStepName && (
                   <div className="text-xs text-neutral-400 truncate">
@@ -174,15 +176,15 @@ export const Controls: React.FC<ControlsProps> = ({
           </div>
 
           {/* Control Buttons - RIGHT */}
-          <div className="flex items-center gap-1 flex-shrink-0">
-            <ControlButton onClick={onRepeat}>
+          <div className="flex items-center gap-1 sm:gap-2 mr-1">
+            <ControlButton onClick={onToggleMute} className="hidden sm:flex">
+              {isMuted ? <MuteIcon /> : <UnmuteIcon />}
+            </ControlButton>
+            <ControlButton onClick={onRepeat} className="hidden sm:flex">
               <RepeatIcon />
             </ControlButton>
-            <ControlButton onClick={onTogglePause}>
+            <ControlButton onClick={onTogglePause} className="hidden sm:flex">
               {isPaused ? <PlayIcon /> : <PauseIcon />}
-            </ControlButton>
-            <ControlButton onClick={onToggleMute}>
-              {isMuted ? <MuteIcon /> : <UnmuteIcon />}
             </ControlButton>
             <ControlButton onClick={() => setIsExpanded(!isExpanded)}>
               {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
@@ -190,41 +192,40 @@ export const Controls: React.FC<ControlsProps> = ({
           </div>
         </div>
 
-        {/* Collapsible Content */}
-        <div className={`transition-all duration-500 ease-in-out grid ${isExpanded ? 'grid-rows-[1fr] opacity-100 pt-1.5' : 'grid-rows-[0fr] opacity-0'}`}>
-          <div className="overflow-hidden min-h-0">
-
+        {/* Collapsible Content - Transcript and Input Field */}
+        {isExpanded && (
+          <div className="mt-2">
             {/* Row 2: Transcript - Only during DRAWING */}
             {showTranscript && explanation && (
-              <div className="mb-2 px-1">
+              <div className="mb-2 px-3">
                 <p className="text-sm text-neutral-400 leading-relaxed">{explanation}</p>
                 {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
               </div>
             )}
 
             {/* Row 3: Input Field */}
-            <div className="relative flex items-center bg-black rounded-lg p-1">
+            <div className="relative flex items-center bg-black rounded-full p-1">
               <input
                 ref={inputRef}
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask a question or enter a command..."
+                placeholder="Or type your own idea..."
                 disabled={isInputDisabled}
-                className="w-full bg-transparent text-white placeholder-neutral-500 text-lg py-2 pl-3 pr-14 focus:outline-none disabled:opacity-50"
+                className="flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-6 py-3 border-none focus:outline-none focus:ring-0 disabled:opacity-50 custom-caret"
               />
               <button
-                onClick={() => onSubmit(inputValue)}
+                onClick={handleSubmit}
                 disabled={isInputDisabled || !inputValue.trim()}
-                className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full transition-all duration-300 transform hover:scale-105 active:scale-95 ${inputValue.trim() && !isInputDisabled ? 'bg-[#1F51FF] text-white' : 'bg-neutral-800 text-neutral-400'}`}
-                aria-label="Submit prompt"
+                className="w-12 h-12 flex items-center justify-center bg-[#1F51FF] text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:bg-blue-800 disabled:cursor-not-allowed"
+                aria-label="Send prompt"
               >
                 <SendIcon />
               </button>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
