@@ -315,8 +315,16 @@ const App: React.FC = () => {
   const handleTogglePause = useCallback(() => {
     console.log(`[PAUSE BUTTON] Clicked! status=${status}, isPaused=${isPaused}`);
 
-    if (status !== 'DRAWING') {
-      console.log('[PAUSE BUTTON] Not in DRAWING state, ignoring');
+    // Allow pause during any active playback state (THINKING during audio gen, PREPARING, DRAWING)
+    // Only block during IDLE, DONE, and ERROR states
+    if (status === 'IDLE' || status === 'DONE' || status === 'ERROR') {
+      console.log('[PAUSE BUTTON] No active content to pause, ignoring');
+      return;
+    }
+
+    // Also check if we have steps loaded (can't pause if nothing is loaded)
+    if (whiteboardSteps.length === 0) {
+      console.log('[PAUSE BUTTON] No content loaded yet, ignoring');
       return;
     }
 
@@ -338,7 +346,7 @@ const App: React.FC = () => {
       setIsPaused(false);
       console.log('[PAUSE BUTTON] Set isPaused=false, useEffect will restart');
     }
-  }, [status, isPaused, animationProgress]);
+  }, [status, isPaused, animationProgress, whiteboardSteps]);
   
   useEffect(() => {
     playbackOffsetRef.current = 0;

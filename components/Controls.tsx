@@ -106,6 +106,8 @@ export const Controls: React.FC<ControlsProps> = ({
   const showIdleState = status === 'IDLE' || status === 'DONE' || status === 'ERROR';
   const showProgress = status === 'DRAWING' || status === 'DONE';
   const showTranscript = status === 'DRAWING';
+  // Show playback controls during any active state (THINKING, PREPARING, DRAWING)
+  const hasActiveContent = status === 'THINKING' || status === 'PREPARING' || status === 'DRAWING';
 
   const currentStepName = steps[currentStepIndex]?.stepName || '';
 
