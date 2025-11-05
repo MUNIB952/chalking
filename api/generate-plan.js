@@ -1,9 +1,9 @@
 /**
  * Vercel Serverless Function: Generate Plan with Vertex AI
- * Uses Service Account for authentication
+ * Uses official @google-cloud/vertexai SDK (same approach as local Python setup)
  */
 
-import jwt from 'jsonwebtoken';
+import { VertexAI } from '@google-cloud/vertexai';
 
 export default async function handler(req, res) {
   // Enable CORS
@@ -23,25 +23,15 @@ export default async function handler(req, res) {
   try {
     console.log('📥 Request received:', {
       method: req.method,
-      bodyType: typeof req.body,
-      bodyKeys: req.body ? Object.keys(req.body) : [],
       hasPrompt: !!req.body?.prompt,
-      promptType: typeof req.body?.prompt,
       promptLength: req.body?.prompt?.length || 0
     });
 
     const { prompt } = req.body;
 
     if (!prompt || typeof prompt !== 'string') {
-      console.error('❌ Invalid prompt:', { prompt, type: typeof prompt, body: req.body });
-      return res.status(400).json({
-        error: 'Prompt is required',
-        debug: {
-          receivedType: typeof prompt,
-          bodyKeys: req.body ? Object.keys(req.body) : [],
-          bodyPreview: JSON.stringify(req.body).substring(0, 200)
-        }
-      });
+      console.error('❌ Invalid prompt');
+      return res.status(400).json({ error: 'Prompt is required' });
     }
 
     const projectId = process.env.GCP_PROJECT_ID;
@@ -49,110 +39,68 @@ export default async function handler(req, res) {
     const serviceAccountJson = process.env.GCP_SERVICE_ACCOUNT_JSON;
 
     if (!projectId || !serviceAccountJson) {
-      console.error('❌ Missing required environment variables:', {
-        hasProjectId: !!projectId,
-        hasServiceAccountJson: !!serviceAccountJson,
-        serviceAccountJsonLength: serviceAccountJson?.length || 0
-      });
-      return res.status(500).json({
-        error: 'Server configuration error',
-        debug: {
-          hasProjectId: !!projectId,
-          hasServiceAccountJson: !!serviceAccountJson
-        }
-      });
+      console.error('❌ Missing required environment variables');
+      return res.status(500).json({ error: 'Server configuration error' });
     }
 
-    let serviceAccount;
-    try {
-      serviceAccount = JSON.parse(serviceAccountJson);
-      console.log('✅ Service account parsed successfully');
-    } catch (parseError) {
-      console.error('❌ Failed to parse service account JSON:', parseError);
-      return res.status(500).json({
-        error: 'Invalid service account configuration',
-        debug: parseError.message
-      });
-    }
+    // Parse service account credentials
+    const credentials = JSON.parse(serviceAccountJson);
 
-    // Get OAuth2 access token
-    const accessToken = await getAccessToken(serviceAccount);
-
-    // Use Gemini 2.0 Flash (available in Vertex AI, supports up to 8192 tokens)
-    const endpoint = `https://${location}-aiplatform.googleapis.com/v1/projects/${projectId}/locations/${location}/publishers/google/models/gemini-2.0-flash-exp:generateContent`;
-
-    console.log('✅ Calling Vertex AI from serverless function');
-
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify({
-        contents: [{
-          role: 'user',
-          parts: [{ text: prompt }]
-        }],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: 8192,  // Gemini 2.0 Flash supports up to 8192
-          temperature: 0.7,
+    // Initialize Vertex AI with service account (same as local Python setup)
+    const vertexAI = new VertexAI({
+      project: projectId,
+      location: location,
+      googleAuthOptions: {
+        credentials: {
+          client_email: credentials.client_email,
+          private_key: credentials.private_key,
         }
-      })
+      }
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error('Vertex AI Error:', errorData);
-      return res.status(response.status).json({ error: errorData });
+    // Use gemini-2.5-pro (same model that worked locally)
+    const model = vertexAI.getGenerativeModel({
+      model: 'gemini-2.5-pro',
+      generationConfig: {
+        maxOutputTokens: 8192,
+        temperature: 0.7,
+        responseMimeType: 'application/json',
+      },
+    });
+
+    console.log('✅ Calling Vertex AI with official SDK (gemini-2.5-pro)');
+
+    // Generate content (same as local client.models.generate_content)
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+
+    // Extract text from response
+    const textResponse = response.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!textResponse) {
+      throw new Error('No response from Vertex AI');
     }
 
-    const data = await response.json();
-
-    if (data.usageMetadata) {
-      console.log('📊 Token usage:', data.usageMetadata);
+    // Log usage metadata
+    if (response.usageMetadata) {
+      console.log('📊 Token usage:', {
+        promptTokens: response.usageMetadata.promptTokenCount,
+        candidatesTokens: response.usageMetadata.candidatesTokenCount,
+        totalTokens: response.usageMetadata.totalTokenCount,
+      });
     }
 
-    return res.status(200).json(data);
+    // Return in same format as before
+    return res.status(200).json({
+      candidates: response.candidates,
+      usageMetadata: response.usageMetadata,
+    });
 
   } catch (error) {
     console.error('❌ Error:', error);
     return res.status(500).json({
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: error instanceof Error ? error.message : 'Unknown error',
+      details: error.toString()
     });
   }
-}
-
-async function getAccessToken(serviceAccount) {
-  const now = Math.floor(Date.now() / 1000);
-
-  const payload = {
-    iss: serviceAccount.client_email,
-    scope: 'https://www.googleapis.com/auth/cloud-platform',
-    aud: 'https://oauth2.googleapis.com/token',
-    exp: now + 3600,
-    iat: now
-  };
-
-  const token = jwt.sign(payload, serviceAccount.private_key, {
-    algorithm: 'RS256'
-  });
-
-  const response = await fetch('https://oauth2.googleapis.com/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: token
-    })
-  });
-
-  const data = await response.json();
-
-  if (!data.access_token) {
-    throw new Error('Failed to get access token');
-  }
-
-  return data.access_token;
 }
