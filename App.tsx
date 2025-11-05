@@ -313,42 +313,31 @@ const App: React.FC = () => {
   }, [whiteboardSteps]);
   
   const handleTogglePause = useCallback(() => {
-    if (status !== 'DRAWING') return; // Only allow pause during DRAWING
+    console.log(`[PAUSE BUTTON] Clicked! status=${status}, isPaused=${isPaused}`);
 
-    const willBePaused = !isPaused;
-    console.log(`[PAUSE] Toggling pause: ${isPaused} -> ${willBePaused}`);
-
-    if (willBePaused) {
-      // PAUSING: Stop everything immediately
-      pausedProgressRef.current = animationProgress;
-      pausedAtRef.current = performance.now();
-
-      // Clear timeouts and animations
-      if (stepTimeoutRef.current) {
-        clearTimeout(stepTimeoutRef.current);
-        stepTimeoutRef.current = null;
-      }
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-
-      // Stop audio immediately
-      if (audioSourceRef.current) {
-        console.log(`[PAUSE] Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
-        try {
-          audioSourceRef.current.stop();
-        } catch (e) {
-          console.log('[PAUSE] Audio source already stopped');
-        }
-        audioSourceRef.current = null;
-      }
-    } else {
-      // RESUMING: Just set the flag, useEffect will handle restart
-      console.log(`[PAUSE] Resuming from progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+    if (status !== 'DRAWING') {
+      console.log('[PAUSE BUTTON] Not in DRAWING state, ignoring');
+      return;
     }
 
-    setIsPaused(willBePaused);
+    const willBePaused = !isPaused;
+    console.log(`[PAUSE BUTTON] Will change: ${isPaused} -> ${willBePaused}`);
+
+    if (willBePaused) {
+      // PAUSING: Save state and trigger cleanup via React
+      pausedProgressRef.current = animationProgress;
+      pausedAtRef.current = performance.now();
+      console.log(`[PAUSE BUTTON] Saved progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+
+      // Set isPaused to trigger useEffect cleanup (which will stop everything)
+      setIsPaused(true);
+      console.log('[PAUSE BUTTON] Set isPaused=true, useEffect cleanup will run');
+    } else {
+      // RESUMING: useEffect will restart from saved progress
+      console.log(`[PAUSE BUTTON] Resuming from ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+      setIsPaused(false);
+      console.log('[PAUSE BUTTON] Set isPaused=false, useEffect will restart');
+    }
   }, [status, isPaused, animationProgress]);
   
   useEffect(() => {
@@ -475,18 +464,31 @@ const App: React.FC = () => {
     
     runStep();
 
+    // CLEANUP: This runs when isPaused changes, step changes, or component unmounts
     return () => {
+      console.log('[CLEANUP] useEffect cleanup running - cancelling step');
       isCancelled = true;
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
 
-      // Stop current step's audio when moving to next step
-      // Each step has its own audio file, so we stop the current one
+      // Clear all pending operations
+      if (animationFrameRef.current) {
+        console.log('[CLEANUP] Cancelling animation frame');
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (stepTimeoutRef.current) {
+        console.log('[CLEANUP] Clearing step timeout');
+        clearTimeout(stepTimeoutRef.current);
+        stepTimeoutRef.current = null;
+      }
+
+      // CRITICAL: Stop audio immediately when cleanup runs
+      // This stops the audio when pause is clicked or when switching steps
       if (audioSourceRef.current) {
+        console.log('[CLEANUP] Stopping audio source');
         try {
           audioSourceRef.current.stop();
         } catch (e) {
-          // Audio already stopped
+          console.log('[CLEANUP] Audio already stopped');
         }
         audioSourceRef.current = null;
       }
