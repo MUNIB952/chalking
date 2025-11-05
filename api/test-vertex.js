@@ -86,40 +86,70 @@ export default async function handler(req, res) {
       const listResponseText = await listResponse.text();
       let listData;
 
+      // Log the response for debugging
+      console.log('List Models Response:', {
+        status: listResponse.status,
+        statusText: listResponse.statusText,
+        contentType: listResponse.headers.get('content-type'),
+        bodyPreview: listResponseText.substring(0, 200)
+      });
+
       try {
         listData = JSON.parse(listResponseText);
-      } catch (e) {
-        // Not JSON, likely HTML error page
+      } catch (parseError) {
+        // Not JSON, likely HTML error page or 404
+        const errorDetails = {
+          statusCode: listResponse.status,
+          statusText: listResponse.statusText,
+          contentType: listResponse.headers.get('content-type'),
+          responsePreview: listResponseText.substring(0, 500),
+          endpoint: listEndpoint
+        };
+
+        // Determine specific error based on status code
+        let diagnosis;
+        if (listResponse.status === 404) {
+          diagnosis = {
+            issue: 'API endpoint not found (404)',
+            possibleCauses: [
+              '1. Vertex AI API not enabled in your GCP project',
+              '2. Wrong region/location specified',
+              '3. Service account lacks API access'
+            ],
+            fix: 'Enable Vertex AI API at: https://console.cloud.google.com/apis/library/aiplatform.googleapis.com?project=gen-lang-client-0070274537'
+          };
+        } else if (listResponse.status === 403) {
+          diagnosis = {
+            issue: 'Permission denied (403)',
+            possibleCauses: [
+              '1. Service account missing "Vertex AI User" role',
+              '2. Billing not enabled or $300 credit not activated',
+              '3. API restrictions blocking access'
+            ],
+            fix: 'Check IAM permissions at: https://console.cloud.google.com/iam-admin/iam?project=gen-lang-client-0070274537'
+          };
+        } else if (listResponse.status === 401) {
+          diagnosis = {
+            issue: 'Authentication failed (401)',
+            possibleCauses: [
+              '1. OAuth token invalid or expired',
+              '2. Service account credentials incorrect'
+            ],
+            fix: 'Regenerate service account JSON key'
+          };
+        } else {
+          diagnosis = {
+            issue: `Unexpected HTTP ${listResponse.status}`,
+            possibleCauses: ['Unknown error - check response preview below'],
+            fix: 'Contact support with error details'
+          };
+        }
+
         results.tests.push({
           name: 'List Models API',
           status: 'FAILED',
-          details: {
-            statusCode: listResponse.status,
-            statusText: listResponse.statusText,
-            responsePreview: listResponseText.substring(0, 500),
-            error: 'API returned non-JSON response (likely HTML error page)'
-          }
-        });
-
-        // Try to extract more info
-        results.tests.push({
-          name: 'Diagnosis',
-          status: 'INFO',
-          details: {
-            possibleCauses: [
-              '1. Vertex AI API not enabled in GCP Console',
-              '2. Service account missing "Vertex AI User" role',
-              '3. Billing not set up or $300 credit not activated',
-              '4. Project ID or location incorrect'
-            ],
-            nextSteps: [
-              'Go to: https://console.cloud.google.com/iam-admin/iam?project=gen-lang-client-0070274537',
-              'Find: vertex-express@gen-lang-client-0070274537.iam.gserviceaccount.com',
-              'Click edit (pencil icon)',
-              'Add role: "Vertex AI User"',
-              'Save and wait 1-2 minutes'
-            ]
-          }
+          details: errorDetails,
+          diagnosis: diagnosis
         });
 
         return res.status(200).json(results);
