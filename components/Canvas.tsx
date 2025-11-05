@@ -11,6 +11,7 @@ interface CanvasProps {
   isPaused: boolean;
   key: number; // To force re-mount and reset
   explanation: string;
+  onFocusRequest?: () => void;
 }
 
 type AllDrawableItem = (DrawingCommand | Annotation) & { stepOrigin: Point };
@@ -114,30 +115,18 @@ const drawAnimatedText = (ctx: CanvasRenderingContext2D, annotation: TextAnnotat
     ctx.font = `400 ${fontSize}px Caveat, cursive`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    
+
     ctx.save();
 
     if (isContextual) {
-        // For contextual labels, draw immediately but faded, no animation.
+        // For contextual labels, draw immediately but faded
         ctx.globalAlpha *= 0.6;
         ctx.fillText(text, x, y);
     } else {
-        // Original animation logic for new labels
-        const animationCompletionPoint = 0.4;
-        const easedProgress = Math.min(1, progress / animationCompletionPoint);
-        if (easedProgress <= 0) {
-          ctx.restore(); // must restore even if we draw nothing
-          return;
-        }
-
-        const finalProgress = 1 - Math.pow(1 - easedProgress, 3);
-        const currentScale = 0.8 + (0.2 * finalProgress); // from 0.8 to 1.0
-        const currentAlpha = finalProgress;
-
-        ctx.globalAlpha *= currentAlpha;
-        ctx.translate(x, y);
-        ctx.scale(currentScale, currentScale);
-        ctx.fillText(text, 0, 0);
+        // Simple fade-in animation
+        const fadeProgress = Math.min(progress * 3, 1); // Fade in quickly (first 33% of progress)
+        ctx.globalAlpha *= fadeProgress;
+        ctx.fillText(text, x, y);
     }
 
     ctx.restore();
@@ -294,9 +283,15 @@ const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, an
 
   const drawItem = (item: DrawingCommand | Annotation, progress: number) => {
       let itemColor = item.color || defaultColor;
-      
-      const forbiddenColors = ['#000000', '#0a0a0a', '#18181b', '#333333'];
+
+      // Expanded forbidden colors list - all black and very dark colors are prohibited
+      const forbiddenColors = [
+        '#000000', '#0a0a0a', '#18181b', '#333333', '#000',
+        '#111111', '#222222', '#1a1a1a', '#0d0d0d', '#050505',
+        'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)'
+      ];
       if (forbiddenColors.includes(itemColor.toLowerCase())) {
+          console.warn(`Forbidden color detected: ${itemColor}. Replacing with white.`);
           itemColor = defaultColor;
       }
 
@@ -389,6 +384,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   animationProgress,
   isPaused,
   explanation,
+  onFocusRequest
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, zoom: 1 });
@@ -396,7 +392,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   const lastPanPoint = useRef({ x: 0, y: 0 });
   const penTipPosition = useRef<Point | null>(null);
 
-  const isInteractive = useMemo(() => status !== 'THINKING' && status !== 'DRAWING' && status !== 'PREPARING', [status]);
+  // Always allow interaction during DRAWING and DONE, disable only during THINKING/PREPARING
+  const isInteractive = useMemo(() => status !== 'THINKING' && status !== 'PREPARING', [status]);
   const cursorClass = isPanning ? 'grabbing-cursor' : (isInteractive ? 'grab-cursor' : 'wait-cursor');
   
   const showLoader = useMemo(() => status === 'THINKING' || status === 'PREPARING', [status]);
@@ -581,7 +578,12 @@ export const Canvas: React.FC<CanvasProps> = ({
       for (let i = 0; i < currentStepIndex; i++) {
         const step = resolvedSteps[i];
         if (step) {
-          drawStepContent(ctx, step, 1, currentStepItemIds);
+          // Only exclude items if this step shares the same origin as current step
+          // This prevents re-drawing items during Conceptual Pivot but allows Addition steps to show fully
+          const sharesOrigin = currentStep &&
+            step.origin.x === currentStep.origin.x &&
+            step.origin.y === currentStep.origin.y;
+          drawStepContent(ctx, step, 1, sharesOrigin ? currentStepItemIds : undefined);
         }
       }
 
@@ -615,7 +617,31 @@ export const Canvas: React.FC<CanvasProps> = ({
     frameId = requestAnimationFrame(renderLoop);
     return () => cancelAnimationFrame(frameId);
   }, [drawCanvas]);
-  
+
+  // Focus handler - centers view on current drawing area
+  const handleFocus = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !currentStep) return;
+
+    setIsPanning(false); // Stop any ongoing pan
+
+    const rect = canvas.getBoundingClientRect();
+    const focalPoint = penTipPosition.current || currentStep.origin;
+
+    if (focalPoint) {
+      const targetX = rect.width / 2 - (focalPoint as AbsolutePoint).x * viewTransform.zoom;
+      const targetY = rect.height / 2 - (focalPoint as AbsolutePoint).y * viewTransform.zoom;
+      setViewTransform(prev => ({ ...prev, x: targetX, y: targetY }));
+    }
+  }, [currentStep, viewTransform.zoom]);
+
+  // Expose focus handler to parent
+  useEffect(() => {
+    if (onFocusRequest) {
+      (window as any).__canvasFocus = handleFocus;
+    }
+  }, [handleFocus, onFocusRequest]);
+
   useEffect(() => {
     if (!currentStep || status !== 'DRAWING' || isPaused) {
       penTipPosition.current = null;
@@ -648,15 +674,19 @@ export const Canvas: React.FC<CanvasProps> = ({
 
       if (focalPoint) {
           setViewTransform(prev => {
+              // Responsive smoothing: faster on mobile for snappier tracking
+              const isMobile = rect.width < 640; // sm breakpoint
+              const smoothingFactor = isMobile ? 0.12 : 0.08;
+
               const targetX = rect.width / 2 - (focalPoint as AbsolutePoint).x * prev.zoom;
               const targetY = rect.height / 2 - (focalPoint as AbsolutePoint).y * prev.zoom;
 
               const dx = targetX - prev.x;
               const dy = targetY - prev.y;
 
-              const newX = (Math.abs(dx) < 1) ? targetX : prev.x + dx * 0.08;
-              const newY = (Math.abs(dy) < 1) ? targetY : prev.y + dy * 0.08;
-              
+              const newX = (Math.abs(dx) < 1) ? targetX : prev.x + dx * smoothingFactor;
+              const newY = (Math.abs(dy) < 1) ? targetY : prev.y + dy * smoothingFactor;
+
               return { ...prev, x: newX, y: newY };
           });
       }
@@ -722,10 +752,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full relative" onMouseLeave={handleMouseUp} onMouseUp={handleMouseUp} >
+    <div className="w-full h-full relative pointer-events-none z-0" onMouseLeave={handleMouseUp} onMouseUp={handleMouseUp} >
         <canvas
             ref={canvasRef}
-            className={`w-full h-full ${cursorClass}`}
+            className={`w-full h-full pointer-events-auto ${cursorClass}`}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             role="img"

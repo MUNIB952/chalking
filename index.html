@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/png" href="/icons.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/icons02.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>AI Drawing Assistant</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +19,7 @@
         -moz-osx-font-smoothing: grayscale;
       }
       .wait-cursor {
-        cursor: wait;
+        cursor: pointer;
       }
       .grab-cursor {
         cursor: grab;
@@ -62,6 +62,36 @@
       /* New class for fading edges effect */
       .fade-mask-x-strong {
         mask-image: linear-gradient(to right, transparent 0%, black 5%, black 80%, transparent 100%);
+      }
+
+      /* Premium animations */
+      @keyframes slideUp {
+        from {
+          transform: translateY(20px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+
+      @keyframes shimmer {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(100%);
+        }
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
       }
     </style>
   <script type="importmap">

@@ -1,6 +1,57 @@
 
-
 import React from 'react';
+
+const iconProps = {
+  xmlns: "http://www.w3.org/2000/svg",
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.5,
+  strokeLinecap: "round" as "round",
+  strokeLinejoin: "round" as "round",
+  className:"w-6 h-6"
+};
+
+// Speaker with sound waves
+export const UnmuteIcon = () => (
+  <svg {...iconProps}><path d="M11 5L6 9H2v6h4l5 4V5zM17 12a5 5 0 00-5-5m0 10a5 5 0 005-5"/></svg>
+);
+
+// Speaker without sound waves
+export const MuteIcon = () => (
+    <svg {...iconProps}><path d="M11 5L6 9H2v6h4l5 4V5z"/></svg>
+);
+
+export const RepeatIcon = () => (
+  <svg {...iconProps}><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+);
+
+export const PauseIcon = () => (
+  <svg {...iconProps}><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+);
+
+export const PlayIcon = () => (
+    <svg {...iconProps}><path d="M5 3l14 9-14 9V3z"/></svg>
+);
+
+export const ExpandIcon = () => (
+  <svg {...iconProps}><path d="M6 9l6 6 6-6"/></svg>
+);
+
+export const CollapseIcon = () => (
+    <svg {...iconProps}><path d="M18 15l-6-6-6 6"/></svg>
+);
+
+export const SendIcon = ({ className }: { className?: string }) => (
+  <svg {...iconProps} strokeWidth={2} className={`w-5 h-5 ${className ?? ''}`}><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+);
+
+export const FocusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <circle cx="12" cy="12" r="10"></circle>
+      <circle cx="12" cy="12" r="3"></circle>
+    </svg>
+);
 
 export const PenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -8,37 +59,11 @@ export const PenIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
   </svg>
 );
 
-export const SendIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-    <line x1="22" y1="2" x2="11" y2="13"></line>
-    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-  </svg>
-);
-
 export const LoaderIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
         <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
     </svg>
 );
-
-export const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <polyline points="6 9 12 15 18 9"></polyline>
-    </svg>
-);
-
-export const ChevronUpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-        <polyline points="18 15 12 9 6 15"></polyline>
-    </svg>
-);
-
-export const RepeatIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-      <path d="M3 3v5h5"/>
-    </svg>
-  );
 
 export const GithubIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -53,14 +78,14 @@ export const MailIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
     </svg>
 );
 
-export const PauseIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"></path>
+export const ChevronDownIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <polyline points="6 9 12 15 18 9"></polyline>
     </svg>
 );
-  
-export const PlayIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" {...props}>
-      <path d="M8 5v14l11-7z"></path>
+
+export const ChevronUpIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" {...props}>
+        <polyline points="18 15 12 9 6 15"></polyline>
     </svg>
 );

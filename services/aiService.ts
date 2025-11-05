@@ -276,6 +276,7 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
         "whiteboard": [
           {
             "origin": { "x": number, "y": number },
+            "stepName": "string - SHORT name for this step (2-5 words, e.g., 'Introduction', 'Building Blocks', 'Final Concept')",
             "explanation": "string - what you'll say during this step",
             "drawingPlan": [
               { "type": "circle", "center": { "x": number, "y": number }, "radius": number, "color": "#hex", "id": "string", "isFilled": boolean },
@@ -299,6 +300,7 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
         "whiteboard": [
           {
             "origin": { "x": 0, "y": 0 },
+            "stepName": "The Drawbridge",
             "explanation": "Imagine a drawbridge over a river. When it's down, cars can cross.",
             "drawingPlan": [
               { "type": "rectangle", "center": { "x": 0, "y": 100 }, "width": 400, "height": 20, "color": "#06b6d4", "id": "bridge" }

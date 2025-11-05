@@ -5,7 +5,7 @@ import { Canvas } from './components/Canvas';
 import { Controls } from './components/Controls';
 import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
-import { MailIcon, GithubIcon } from './components/icons';
+import { FocusIcon } from './components/icons';
 import { RateLimiter } from './utils/rateLimiter';
 
 // This is the code that will run in the background thread to avoid blocking the UI.
@@ -70,12 +70,14 @@ const App: React.FC = () => {
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   const [canvasKey, setCanvasKey] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
+  const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // --- Audio & Animation Engine Refs ---
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioWorkerRef = useRef<Worker | null>(null);
   const audioSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const audioBuffersRef = useRef<(AudioBuffer | null)[]>([]);
+  const gainNodeRef = useRef<GainNode | null>(null);
 
   const stepTimeoutRef = useRef<number | null>(null);
   const statusMessageIntervalRef = useRef<number | null>(null);
@@ -112,6 +114,11 @@ const App: React.FC = () => {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Create gain node for volume control (mute functionality)
+      if (audioContextRef.current) {
+        gainNodeRef.current = audioContextRef.current.createGain();
+        gainNodeRef.current.connect(audioContextRef.current.destination);
+      }
     }
     const blob = new Blob([audioWorkerCode], { type: 'application/javascript' });
     const worker = new Worker(URL.createObjectURL(blob));
@@ -280,37 +287,56 @@ const App: React.FC = () => {
 
   const handleRepeat = useCallback(() => {
     if (whiteboardSteps.length === 0) return;
-    stopEverything();
+
+    // Soft reset: Stop current playback but preserve audio buffers
+    if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
+    if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
+    if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+
+    if (audioSourceRef.current) {
+        try { audioSourceRef.current.stop(); } catch (e) { /* ignore */ }
+        audioSourceRef.current = null;
+    }
+
+    // Reset playback state WITHOUT clearing audio buffers or tracking
+    setIsPaused(false);
+    playbackOffsetRef.current = 0;
+    pausedProgressRef.current = 0;
+    setAnimationProgress(0);
+
+    // Reset to beginning and restart
     setCurrentStepIndex(0);
     setCanvasKey(prev => prev + 1);
     setStatus('DRAWING');
-  }, [whiteboardSteps, stopEverything]);
+
+    console.log('🔄 Repeating explanation with cached audio buffers');
+  }, [whiteboardSteps]);
   
   const handleTogglePause = useCallback(() => {
-    if (status === 'DRAWING') {
-      const willBePaused = !isPaused;
+    console.log(`[PAUSE BUTTON] Clicked! status=${status}, isPaused=${isPaused}`);
 
-      if (willBePaused) {
-        // Pausing: Save current animation progress and stop this step's audio
-        pausedProgressRef.current = animationProgress;
-        pausedAtRef.current = performance.now();
+    if (status !== 'DRAWING') {
+      console.log('[PAUSE BUTTON] Not in DRAWING state, ignoring');
+      return;
+    }
 
-        if (audioSourceRef.current) {
-          console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+    const willBePaused = !isPaused;
+    console.log(`[PAUSE BUTTON] Will change: ${isPaused} -> ${willBePaused}`);
 
-          try {
-            audioSourceRef.current.stop();
-          } catch (e) {
-            console.log('Audio source already stopped');
-          }
-          audioSourceRef.current = null;
-        }
-      } else {
-        // Resuming: Log that we're resuming from saved progress
-        console.log(`Resuming from progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
-      }
+    if (willBePaused) {
+      // PAUSING: Save state and trigger cleanup via React
+      pausedProgressRef.current = animationProgress;
+      pausedAtRef.current = performance.now();
+      console.log(`[PAUSE BUTTON] Saved progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
 
-      setIsPaused(willBePaused);
+      // Set isPaused to trigger useEffect cleanup (which will stop everything)
+      setIsPaused(true);
+      console.log('[PAUSE BUTTON] Set isPaused=true, useEffect cleanup will run');
+    } else {
+      // RESUMING: useEffect will restart from saved progress
+      console.log(`[PAUSE BUTTON] Resuming from ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+      setIsPaused(false);
+      console.log('[PAUSE BUTTON] Set isPaused=false, useEffect will restart');
     }
   }, [status, isPaused, animationProgress]);
   
@@ -321,14 +347,18 @@ const App: React.FC = () => {
   }, [currentStepIndex]);
 
   useEffect(() => {
+    // Check if we've completed all steps
+    if (status === 'DRAWING' && whiteboardSteps.length > 0 && currentStepIndex >= whiteboardSteps.length) {
+      setStatus('DONE');
+      setAnimationProgress(1); // Ensure final frame is fully drawn
+      if (overallExplanationRef.current) {
+        setExplanation(overallExplanationRef.current);
+      }
+      return;
+    }
+
     const currentStep = whiteboardSteps[currentStepIndex];
     if (status !== 'DRAWING' || !currentStep || isPaused) {
-      if (status === 'DRAWING' && whiteboardSteps.length > 0 && currentStepIndex >= whiteboardSteps.length) {
-        setStatus('DONE');
-        if (overallExplanationRef.current) {
-          setExplanation(overallExplanationRef.current);
-        }
-      }
       return;
     }
 
@@ -418,10 +448,10 @@ const App: React.FC = () => {
       stepTimeoutRef.current = window.setTimeout(completeAndAdvance, remainingDurationMs + 100);
 
       // Play THIS step's audio (each step has its own audio file)
-      if (buffer && audioContextRef.current && !audioSourceRef.current) {
+      if (buffer && audioContextRef.current && gainNodeRef.current && !audioSourceRef.current) {
         const source = audioContextRef.current.createBufferSource();
         source.buffer = buffer;
-        source.connect(audioContextRef.current.destination);
+        source.connect(gainNodeRef.current); // Connect to gain node for mute control
 
         // If resuming from pause, start from where we paused within THIS audio file
         const startOffset = startProgress * buffer.duration;
@@ -434,41 +464,85 @@ const App: React.FC = () => {
     
     runStep();
 
+    // CLEANUP: This runs when isPaused changes, step changes, or component unmounts
     return () => {
+      console.log('[CLEANUP] useEffect cleanup running - cancelling step');
       isCancelled = true;
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
 
-      // Stop current step's audio when moving to next step
-      // Each step has its own audio file, so we stop the current one
+      // Clear all pending operations
+      if (animationFrameRef.current) {
+        console.log('[CLEANUP] Cancelling animation frame');
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+      if (stepTimeoutRef.current) {
+        console.log('[CLEANUP] Clearing step timeout');
+        clearTimeout(stepTimeoutRef.current);
+        stepTimeoutRef.current = null;
+      }
+
+      // CRITICAL: Stop audio immediately when cleanup runs
+      // This stops the audio when pause is clicked or when switching steps
       if (audioSourceRef.current) {
+        console.log('[CLEANUP] Stopping audio source');
         try {
           audioSourceRef.current.stop();
         } catch (e) {
-          // Audio already stopped
+          console.log('[CLEANUP] Audio already stopped');
         }
         audioSourceRef.current = null;
       }
     };
   }, [status, currentStepIndex, whiteboardSteps, isPaused]);
 
+  // Handle mute/unmute
+  useEffect(() => {
+    if (gainNodeRef.current) {
+      const newValue = isMuted ? 0 : 1;
+      gainNodeRef.current.gain.value = newValue;
+      console.log(`[MUTE] Audio ${isMuted ? 'MUTED' : 'UNMUTED'} (gain: ${newValue})`);
+    }
+  }, [isMuted]);
+
+  const handleToggleMute = useCallback(() => {
+    setIsMuted(prev => {
+      console.log(`[MUTE] Toggling mute: ${prev} -> ${!prev}`);
+      return !prev;
+    });
+  }, []);
+
   return (
-    <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative">
-        <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-10 pointer-events-none">
+    <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 flex justify-between items-center z-10 pointer-events-none">
             <div className="pointer-events-auto">
-                <img src="/icons.png" alt="AI Drawing Assistant Logo" className="h-8 w-auto object-contain" style={{ imageRendering: 'auto' }} />
+                <h1
+                  className="text-[1.75rem] sm:text-3xl font-bold tracking-tight"
+                  style={{
+                    color: '#1F51FF',
+                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+                    textShadow: '0 0 20px rgba(31, 81, 255, 0.3)'
+                  }}
+                >
+                  DodgySoft
+                </h1>
             </div>
-            <div className="pointer-events-auto">
-                <div className="flex items-center gap-4 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full px-4 py-1.5 text-sm text-gray-500 shadow-lg">
-                    <span>Research Preview</span>
-                    <div className="w-px h-4 bg-white/20"></div>
-                    <a href="mailto:team@dodgysoft.dev" target="_blank" rel="noopener noreferrer" title="Email Us" className="text-gray-500 hover:text-cyan-400 transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(34,211,238,0.8)]">
-                        <MailIcon className="w-5 h-5" />
-                    </a>
-                    <a href="https://github.com" target="_blank" rel="noopener noreferrer" title="View on GitHub" className="text-gray-500 hover:text-white transition-all duration-300 hover:drop-shadow-[0_0_4px_rgba(255,255,255,0.8)]">
-                        <GithubIcon className="w-5 h-5" />
-                    </a>
+            <div className="pointer-events-auto flex items-center gap-2">
+                {/* Research Preview Badge */}
+                <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl border border-neutral-800 rounded-lg px-3 py-1.5" style={{ fontFamily: 'Arial, sans-serif' }}>
+                    <span className="text-xs text-neutral-500">Research Preview</span>
                 </div>
+
+                {/* Focus Button */}
+                {(status === 'DRAWING' || status === 'DONE') && (
+                    <button
+                        onClick={() => (window as any).__canvasFocus?.()}
+                        className="p-2 w-10 h-10 flex items-center justify-center rounded-lg bg-black/50 backdrop-blur-xl border border-neutral-800 text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95"
+                        title="Focus on current drawing"
+                        aria-label="Focus on current drawing"
+                    >
+                        <FocusIcon className="w-5 h-5" style={{ color: '#1F51FF' }} />
+                    </button>
+                )}
             </div>
         </div>
 
@@ -480,6 +554,7 @@ const App: React.FC = () => {
             isPaused={isPaused}
             key={canvasKey}
             explanation={explanation}
+            onFocusRequest
         />
         <Controls
             status={status}
@@ -488,9 +563,11 @@ const App: React.FC = () => {
             steps={whiteboardSteps}
             currentStepIndex={currentStepIndex}
             isPaused={isPaused}
+            isMuted={isMuted}
             onSubmit={handleSubmit}
             onRepeat={handleRepeat}
             onTogglePause={handleTogglePause}
+            onToggleMute={handleToggleMute}
         />
     </div>
   );
