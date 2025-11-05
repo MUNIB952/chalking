@@ -3,10 +3,26 @@
 import { GoogleGenAI, Modality } from "@google/genai";
 import { AIResponse } from '../types';
 
-// Initialize Gemini AI client
+// Check which provider to use
+const USE_VERTEX_AI = import.meta.env.VITE_USE_VERTEX_AI === 'true';
+
+// Initialize Gemini AI client (AI Studio)
 const gemini = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
+  apiKey: import.meta.env.VITE_GEMINI_API_KEY
 });
+
+console.log(`🔧 AI Service configured to use: ${USE_VERTEX_AI ? 'Vertex AI (GCP Billing)' : 'AI Studio (Free Tier)'}`);
+
+// Import Vertex AI service if enabled
+let vertexAI: any = null;
+if (USE_VERTEX_AI) {
+  import('./vertexAiService').then(module => {
+    vertexAI = module;
+    console.log('✅ Vertex AI service loaded successfully');
+  }).catch(err => {
+    console.error('❌ Failed to load Vertex AI service:', err);
+  });
+}
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {
@@ -80,6 +96,14 @@ function robustJsonParse(str: string): any {
 const QUOTA_ERROR_MESSAGE = "You've exceeded your API quota. To continue using the app, please check your plan and billing details.";
 
 export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
+  // Route to Vertex AI if enabled
+  if (USE_VERTEX_AI && vertexAI) {
+    console.log('🚀 Using Vertex AI for plan generation');
+    return await vertexAI.getInitialPlan(prompt);
+  }
+
+  // Fall back to AI Studio
+  console.log('🚀 Using AI Studio for plan generation');
   try {
     const fullPrompt = `You are Visu, an expert AI teacher and a master storyteller. You are a skilled graphic designer specializing in creating exceptionally clear, insightful, and memorable technical diagrams. Your style is minimalist, clean, and hand-drawn on a black background. A user has asked: "${prompt}".
 
@@ -379,7 +403,15 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
-  try {
+  // Route to Vertex AI if enabled
+  if (USE_VERTEX_AI && vertexAI) {
+    console.log('🎤 Using Vertex AI TTS');
+    return await vertexAI.generateSpeech(text);
+  }
+
+  // Fall back to AI Studio
+  console.log('🎤 Using AI Studio TTS');
+  try{
     console.log('🎤 Generating speech with Gemini TTS for text:', text.substring(0, 100) + '...');
     console.log('  Text length:', text.length, 'characters');
 

@@ -4,10 +4,11 @@
 import { GoogleGenAI, Type, Modality } from "@google/genai";
 import { AIResponse } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
-function robustJsonParse(str: string): any {
+// Exported so other services can use it
+export function robustJsonParse(str: string): any {
     // First, try to find a JSON block wrapped in ```json ... ```
     let jsonString = str;
     const match = str.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
@@ -168,7 +169,7 @@ const drawingPlanSchema = {
     }
 };
 
-const planSchema = {
+export const planSchema = {
   type: Type.OBJECT,
   properties: {
     explanation: {
@@ -211,11 +212,10 @@ const planSchema = {
   required: ['explanation', 'whiteboard']
 };
 
-const QUOTA_ERROR_MESSAGE = "You've exceeded your API quota. To continue using the app, please check your plan and billing details. You can monitor your usage at https://ai.dev/usage and learn more about rate limits at https://ai.google.dev/gemini-api/docs/rate-limits.";
+export const QUOTA_ERROR_MESSAGE = "You've exceeded your API quota. To continue using the app, please check your plan and billing details. You can monitor your usage at https://ai.dev/usage and learn more about rate limits at https://ai.google.dev/gemini-api/docs/rate-limits.";
 
-export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
-  try {
-    const fullPrompt = `You are Visu, an expert AI teacher and a master storyteller. You are a skilled graphic designer specializing in creating exceptionally clear, insightful, and memorable technical diagrams. Your style is minimalist, clean, and hand-drawn on a black background. A user has asked: "${prompt}".
+// Export the prompt template so it can be reused
+export const fullPromptTemplate = (prompt: string) => `You are Visu, an expert AI teacher and a master storyteller. You are a skilled graphic designer specializing in creating exceptionally clear, insightful, and memorable technical diagrams. Your style is minimalist, clean, and hand-drawn on a black background. A user has asked: "${prompt}".
 
       **Creative Persona & Analogy Directive (MANDATORY)**
       To make each lesson unique and engaging, you must introduce randomness in your approach.
@@ -331,6 +331,10 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       **Output Format:**
       Your entire output must be a single JSON object matching this schema:
       `;
+
+export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
+  try {
+    const fullPrompt = fullPromptTemplate(prompt);
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-pro',
