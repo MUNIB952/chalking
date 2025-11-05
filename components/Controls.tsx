@@ -177,15 +177,19 @@ export const Controls: React.FC<ControlsProps> = ({
 
           {/* Control Buttons - RIGHT */}
           <div className="flex items-center gap-1 mr-1">
-            <ControlButton onClick={onToggleMute} className="hidden sm:flex">
+            {/* Mute - Always visible during DRAWING, desktop-only otherwise */}
+            <ControlButton onClick={onToggleMute} className={showProgress ? '' : 'hidden sm:flex'}>
               {isMuted ? <MuteIcon /> : <UnmuteIcon />}
             </ControlButton>
+            {/* Repeat - Desktop only */}
             <ControlButton onClick={onRepeat} className="hidden sm:flex">
               <RepeatIcon />
             </ControlButton>
-            <ControlButton onClick={onTogglePause} className="hidden sm:flex">
+            {/* Pause - Always visible during DRAWING, desktop-only otherwise */}
+            <ControlButton onClick={onTogglePause} className={showProgress ? '' : 'hidden sm:flex'}>
               {isPaused ? <PlayIcon /> : <PauseIcon />}
             </ControlButton>
+            {/* Expand/Collapse - Always visible */}
             <ControlButton onClick={() => setIsExpanded(!isExpanded)}>
               {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
             </ControlButton>
