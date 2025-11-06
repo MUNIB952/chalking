@@ -6,7 +6,7 @@ import {
   ExpandIcon, CollapseIcon, RepeatIcon, MuteIcon, UnmuteIcon, SendIcon, PlayIcon, PauseIcon
 } from './icons';
 
-interface ControlsProps {
+interface ComposerProps {
   status: AppStatus;
   explanation: string;
   error: string | null;
@@ -85,7 +85,7 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
   );
 };
 
-export const Controls: React.FC<ControlsProps> = ({
+export const Composer: React.FC<ComposerProps> = ({
   status,
   explanation,
   error,
@@ -102,7 +102,7 @@ export const Controls: React.FC<ControlsProps> = ({
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isInputDisabled = status === 'THINKING' || status === 'PREPARING' || status === 'DRAWING';
+  const isInputDisabled = status === 'THINKING' || status === 'PREPARING';
   const showIdleState = status === 'IDLE' || status === 'DONE' || status === 'ERROR';
   const showProgress = status === 'DRAWING' || status === 'DONE';
   const showTranscript = status === 'DRAWING';
@@ -133,18 +133,11 @@ export const Controls: React.FC<ControlsProps> = ({
 
   const progressPercentage = steps.length > 0 ? (status === 'DONE' ? 100 : ((currentStepIndex + 1) / steps.length) * 100) : 0;
 
-  const ControlButton: React.FC<{onClick: () => void, children: React.ReactNode, className?: string}> = ({ onClick, children, className }) => (
-    <button
-      onClick={onClick}
-      className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95 border border-neutral-800 hover:border-neutral-700 ${className || ''}`}
-    >
-      {children}
-    </button>
-  );
-
   return (
-    <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px]">
-      <div className="bg-[#101010] border border-[#1F51FF]/50 hover:border-[#1F51FF] rounded-2xl p-1 transition-all duration-300">
+    <div
+      className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px] z-50"
+    >
+      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between h-12">
@@ -163,10 +156,11 @@ export const Controls: React.FC<ControlsProps> = ({
                 <div className="w-full max-w-md">
                   <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-500 ease-out"
+                      className="h-full rounded-full"
                       style={{
                         width: `${progressPercentage}%`,
-                        backgroundColor: '#1F51FF'
+                        backgroundColor: '#1F51FF',
+                        transition: 'width 0.3s linear'
                       }}
                     ></div>
                   </div>
@@ -176,29 +170,44 @@ export const Controls: React.FC<ControlsProps> = ({
           </div>
 
           {/* Control Buttons - RIGHT */}
-          <div className="flex items-center gap-1 mr-1">
-            {/* Mute - Always visible during DRAWING, desktop-only otherwise */}
-            <ControlButton onClick={onToggleMute} className={showProgress ? '' : 'hidden sm:flex'}>
-              {isMuted ? <MuteIcon /> : <UnmuteIcon />}
-            </ControlButton>
-            {/* Repeat - Desktop only */}
-            <ControlButton onClick={onRepeat} className="hidden sm:flex">
-              <RepeatIcon />
-            </ControlButton>
-            {/* Pause - Always visible during DRAWING, desktop-only otherwise */}
-            <ControlButton onClick={onTogglePause} className={showProgress ? '' : 'hidden sm:flex'}>
-              {isPaused ? <PlayIcon /> : <PauseIcon />}
-            </ControlButton>
-            {/* Expand/Collapse - Always visible */}
-            <ControlButton onClick={() => setIsExpanded(!isExpanded)}>
-              {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
-            </ControlButton>
+          <div className="flex-shrink-0 flex items-center gap-1 mr-1">
+            <button
+              onClick={onToggleMute}
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+            >
+              {isMuted ? <MuteIcon className="w-5 h-5" /> : <UnmuteIcon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onRepeat}
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+            >
+              <RepeatIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onTogglePause}
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+            >
+              {isPaused ? <PlayIcon className="w-5 h-5" /> : <PauseIcon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+            >
+              {isExpanded ? <CollapseIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
         {/* Collapsible Content - Transcript and Input Field */}
-        {isExpanded && (
-          <div className="mt-1.5">
+        <div
+          className="overflow-hidden transition-all duration-500 ease-in-out"
+          style={{
+            maxHeight: isExpanded ? '500px' : '0',
+            opacity: isExpanded ? 1 : 0,
+            marginTop: isExpanded ? '6px' : '0'
+          }}
+        >
+          <div>
             {/* Row 2: Transcript - Only during DRAWING */}
             {showTranscript && explanation && (
               <div className="mb-1.5 px-2">
@@ -229,7 +238,7 @@ export const Controls: React.FC<ControlsProps> = ({
               </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
