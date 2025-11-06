@@ -15,7 +15,6 @@ interface InteractionLayerProps {
 
 const MIN_ZOOM = 0.2;
 const MAX_ZOOM = 5;
-const COMPOSER_ZONE_HEIGHT = 200; // Bottom 200px reserved for Composer
 
 export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) => {
   const [isPanning, setIsPanning] = useState(false);
@@ -28,19 +27,13 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
   // Only interactive during DRAWING and DONE
   const isInteractive = status !== 'THINKING' && status !== 'PREPARING';
 
-  // Check if event is in Composer zone
-  const isInComposerZone = useCallback((clientY: number): boolean => {
-    const viewportHeight = window.innerHeight;
-    return clientY > viewportHeight - COMPOSER_ZONE_HEIGHT;
-  }, []);
-
   // Mouse handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!isInteractive || isInComposerZone(e.clientY)) return;
+    if (!isInteractive) return;
 
     setIsPanning(true);
     lastPanPoint.current = { x: e.clientX, y: e.clientY };
-  }, [isInteractive, isInComposerZone]);
+  }, [isInteractive]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning || !setCanvasTransform) return;
@@ -65,11 +58,9 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
     if (!isInteractive || e.touches.length === 0) return;
 
     const touch = e.touches[0];
-    if (isInComposerZone(touch.clientY)) return;
-
     setIsPanning(true);
     lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
-  }, [isInteractive, isInComposerZone]);
+  }, [isInteractive]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
     if (!isPanning || e.touches.length === 0 || !setCanvasTransform) return;
@@ -96,7 +87,7 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
     if (!layer || !setCanvasTransform) return;
 
     const handleWheel = (e: WheelEvent) => {
-      if (!isInteractive || isInComposerZone(e.clientY)) return;
+      if (!isInteractive) return;
 
       e.preventDefault();
 
@@ -129,7 +120,7 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
     return () => {
       layer.removeEventListener('wheel', handleWheel);
     };
-  }, [isInteractive, isInComposerZone, setCanvasTransform]);
+  }, [isInteractive, setCanvasTransform]);
 
   // Cursor style
   const cursorStyle = !isInteractive
@@ -141,8 +132,9 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
   return (
     <div
       ref={layerRef}
-      className="absolute inset-0"
+      className="absolute top-0 left-0 right-0"
       style={{
+        bottom: '200px', // Stop 200px from bottom - don't overlap Composer
         zIndex: 5,
         pointerEvents: isInteractive ? 'auto' : 'none',
         cursor: cursorStyle,
