@@ -134,21 +134,11 @@ export const Composer: React.FC<ComposerProps> = ({
   const progressPercentage = steps.length > 0 ? (status === 'DONE' ? 100 : ((currentStepIndex + 1) / steps.length) * 100) : 0;
 
   const ControlButton: React.FC<{onClick: () => void, children: React.ReactNode, className?: string}> = ({ onClick, children, className }) => {
-    const handleClick = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      e.preventDefault();
-      onClick();
-    };
-
     return (
       <button
-        onClick={handleClick}
-        onMouseDown={(e) => e.stopPropagation()}
-        onMouseUp={(e) => e.stopPropagation()}
-        onTouchStart={(e) => e.stopPropagation()}
-        onTouchEnd={(e) => e.stopPropagation()}
+        onClick={onClick}
         className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 cursor-pointer ${className || ''}`}
-        style={{ touchAction: 'manipulation', zIndex: 10, pointerEvents: 'auto' }}
+        style={{ pointerEvents: 'auto' }}
       >
         {children}
       </button>
@@ -225,7 +215,7 @@ export const Composer: React.FC<ComposerProps> = ({
             )}
 
             {/* Row 3: Input Field */}
-            <div className="relative flex items-center bg-black rounded-full p-1">
+            <div className="relative flex items-center bg-black rounded-full p-1" style={{ pointerEvents: 'auto' }}>
               <input
                 ref={inputRef}
                 type="text"
@@ -235,11 +225,13 @@ export const Composer: React.FC<ComposerProps> = ({
                 placeholder="Or type your own idea..."
                 disabled={isInputDisabled}
                 className="flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-4 py-2 border-none focus:outline-none focus:ring-0 disabled:opacity-50 custom-caret"
+                style={{ pointerEvents: 'auto' }}
               />
               <button
                 onClick={handleSubmit}
                 disabled={isInputDisabled || !inputValue.trim()}
                 className="w-12 h-12 flex items-center justify-center bg-[#1F51FF] text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:bg-blue-800 disabled:cursor-not-allowed"
+                style={{ pointerEvents: 'auto' }}
                 aria-label="Send prompt"
               >
                 <SendIcon />
