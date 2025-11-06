@@ -62,7 +62,7 @@ export default async function handler(req, res) {
     const model = vertexAI.getGenerativeModel({
       model: 'gemini-2.5-pro',
       generationConfig: {
-        maxOutputTokens: 8192,
+        maxOutputTokens: 60000,  // Maximum for gemini-2.5-pro (60k tokens)
         temperature: 0.7,
         responseMimeType: 'application/json',
       },
