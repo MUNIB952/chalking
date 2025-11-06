@@ -133,28 +133,15 @@ export const Composer: React.FC<ComposerProps> = ({
 
   const progressPercentage = steps.length > 0 ? (status === 'DONE' ? 100 : ((currentStepIndex + 1) / steps.length) * 100) : 0;
 
-  const ControlButton: React.FC<{onClick: () => void, children: React.ReactNode, className?: string}> = ({ onClick, children, className }) => {
-    return (
-      <button
-        onClick={onClick}
-        className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 cursor-pointer ${className || ''}`}
-        style={{ pointerEvents: 'auto' }}
-      >
-        {children}
-      </button>
-    );
-  };
-
   return (
     <div
       className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px] z-50"
-      style={{ pointerEvents: 'none' }}
     >
-      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1" style={{ pointerEvents: 'auto' }}>
+      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between h-12">
-          <div className="flex-1 mr-2 pl-1 min-w-0" style={{ pointerEvents: 'auto' }}>
+          <div className="flex-1 mr-2 pl-1 min-w-0">
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
             ) : showProgress ? (
@@ -183,23 +170,31 @@ export const Composer: React.FC<ComposerProps> = ({
           </div>
 
           {/* Control Buttons - RIGHT */}
-          <div className="flex items-center gap-1 mr-1" style={{ pointerEvents: 'auto' }}>
-            {/* Mute - Always visible during DRAWING, desktop-only otherwise */}
-            <ControlButton onClick={onToggleMute} className={showProgress ? '' : 'hidden sm:flex'}>
-              {isMuted ? <MuteIcon /> : <UnmuteIcon />}
-            </ControlButton>
-            {/* Repeat - Desktop only */}
-            <ControlButton onClick={onRepeat} className="hidden sm:flex">
-              <RepeatIcon />
-            </ControlButton>
-            {/* Pause - Always visible during DRAWING, desktop-only otherwise */}
-            <ControlButton onClick={onTogglePause} className={showProgress ? '' : 'hidden sm:flex'}>
-              {isPaused ? <PlayIcon /> : <PauseIcon />}
-            </ControlButton>
-            {/* Expand/Collapse - Always visible */}
-            <ControlButton onClick={() => setIsExpanded(!isExpanded)}>
-              {isExpanded ? <CollapseIcon /> : <ExpandIcon />}
-            </ControlButton>
+          <div className="flex-shrink-0 flex items-center">
+            <button
+              onClick={onToggleMute}
+              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+            >
+              {isMuted ? <MuteIcon className="w-5 h-5" /> : <UnmuteIcon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={onRepeat}
+              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+            >
+              <RepeatIcon className="w-5 h-5" />
+            </button>
+            <button
+              onClick={onTogglePause}
+              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+            >
+              {isPaused ? <PlayIcon className="w-5 h-5" /> : <PauseIcon className="w-5 h-5" />}
+            </button>
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+            >
+              {isExpanded ? <CollapseIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+            </button>
           </div>
         </div>
 
@@ -215,7 +210,7 @@ export const Composer: React.FC<ComposerProps> = ({
             )}
 
             {/* Row 3: Input Field */}
-            <div className="relative flex items-center bg-black rounded-full p-1" style={{ pointerEvents: 'auto' }}>
+            <div className="relative flex items-center bg-black rounded-full p-1">
               <input
                 ref={inputRef}
                 type="text"
@@ -225,13 +220,11 @@ export const Composer: React.FC<ComposerProps> = ({
                 placeholder="Or type your own idea..."
                 disabled={isInputDisabled}
                 className="flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-4 py-2 border-none focus:outline-none focus:ring-0 disabled:opacity-50 custom-caret"
-                style={{ pointerEvents: 'auto' }}
               />
               <button
                 onClick={handleSubmit}
                 disabled={isInputDisabled || !inputValue.trim()}
                 className="w-12 h-12 flex items-center justify-center bg-[#1F51FF] text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:bg-blue-800 disabled:cursor-not-allowed"
-                style={{ pointerEvents: 'auto' }}
                 aria-label="Send prompt"
               >
                 <SendIcon />
