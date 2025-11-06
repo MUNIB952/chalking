@@ -137,13 +137,17 @@ export const Controls: React.FC<ControlsProps> = ({
     <button
       onClick={onClick}
       className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95 border border-neutral-800 hover:border-neutral-700 ${className || ''}`}
+      style={{ pointerEvents: 'auto' }}
     >
       {children}
     </button>
   );
 
   return (
-    <div className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px]">
+    <div
+      className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px]"
+      style={{ zIndex: 50, pointerEvents: 'auto' }}
+    >
       <div className="bg-[#101010] border border-[#1F51FF]/50 hover:border-[#1F51FF] rounded-2xl p-1 transition-all duration-300">
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
