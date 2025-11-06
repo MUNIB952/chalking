@@ -154,7 +154,7 @@ export const Composer: React.FC<ComposerProps> = ({
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between h-12">
-          <div className="flex-1 mr-2 pl-1 min-w-0">
+          <div className="flex-1 mr-2 pl-1 min-w-0" style={{ pointerEvents: 'auto' }}>
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
             ) : showProgress ? (
@@ -183,7 +183,7 @@ export const Composer: React.FC<ComposerProps> = ({
           </div>
 
           {/* Control Buttons - RIGHT */}
-          <div className="flex items-center gap-1 mr-1">
+          <div className="flex items-center gap-1 mr-1" style={{ pointerEvents: 'auto' }}>
             {/* Mute - Always visible during DRAWING, desktop-only otherwise */}
             <ControlButton onClick={onToggleMute} className={showProgress ? '' : 'hidden sm:flex'}>
               {isMuted ? <MuteIcon /> : <UnmuteIcon />}
