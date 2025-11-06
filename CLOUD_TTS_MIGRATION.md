@@ -59,12 +59,26 @@ This upgrade resolves rate limiting issues and provides production-ready text-to
 
 ## Technical Changes
 
+### Architecture:
+**Serverless API Approach** - Cloud TTS runs server-side via Vercel Serverless Function
+
+```
+Client (Browser)
+    ↓ HTTP POST /api/tts
+Vercel Serverless Function (/api/tts.ts)
+    ↓ Authenticated call
+Google Cloud Text-to-Speech API
+    ↓ Audio response
+Client receives base64 audio
+```
+
 ### New Files:
-1. **`services/cloudTTSService.ts`** - Cloud TTS implementation with service account auth
+1. **`api/tts.ts`** - Vercel Serverless Function (server-side Cloud TTS)
+2. **`services/cloudTTSService.ts`** - Client-side wrapper (calls /api/tts)
 
 ### Modified Files:
-1. **`package.json`** - Added `@google-cloud/text-to-speech` dependency
-2. **`services/aiService.ts`** - Updated `generateSpeech()` to use Cloud TTS
+1. **`package.json`** - Added `@google-cloud/text-to-speech` and `@vercel/node`
+2. **`services/aiService.ts`** - Updated `generateSpeech()` to use Cloud TTS API
 3. **`App.tsx`** - Changed rate limiter from 10/min to 1000/min, removed batching logic
 
 ### Environment Variables (Already Configured):
