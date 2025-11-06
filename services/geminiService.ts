@@ -188,6 +188,10 @@ export const planSchema = {
             properties: absolutePointSchema.properties,
             required: absolutePointSchema.required,
           },
+          stepName: {
+            type: Type.STRING,
+            description: 'Short name for this step (2-5 words, displayed above progress bar). Examples: "Introduction", "Building Blocks", "Final Concept"'
+          },
           explanation: {
             type: Type.STRING,
             description: 'The script for what the AI teacher will say during this step. This will be converted to speech.'
@@ -205,7 +209,7 @@ export const planSchema = {
             items: { type: Type.STRING }
           }
         },
-        required: ['origin', 'explanation', 'drawingPlan', 'annotations']
+        required: ['origin', 'stepName', 'explanation', 'drawingPlan', 'annotations']
       }
     }
   },
@@ -324,6 +328,29 @@ export const fullPromptTemplate = (prompt: string) => `You are Visu, an expert A
           - A point at \`{ y: 100 }\` is **BELOW** the origin. A point at \`{ y: -100 }\` is **ABOVE** the origin.
       2.  **Audience and Tone (Explain Like I'm 10):** Your audience has **ZERO** prior knowledge. Aggressively replace all jargon with simple, everyday language.
       3.  **Be Granular:** Break down the explanation into many small, simple steps (8-15 is typical).
+
+      **CRITICAL: JSON STRUCTURE REQUIREMENTS (MANDATORY)**
+
+      YOUR RESPONSE **MUST** BE A JSON OBJECT WITH EXACTLY TWO TOP-LEVEL KEYS:
+      1. "explanation" (string) - A high-level summary of the entire lesson
+      2. "whiteboard" (array) - Array of step objects
+
+      DO NOT return a plain array! DO NOT wrap in markdown code blocks!
+
+      **MANDATORY FIELDS IN EACH STEP:**
+      - "origin" (object with x, y numbers) - REQUIRED
+      - "stepName" (string) - REQUIRED, 2-5 words (e.g., "Introduction", "Core Concept")
+      - "explanation" (string) - REQUIRED
+      - "drawingPlan" (array or null) - REQUIRED
+      - "annotations" (array) - REQUIRED, use empty array [] if no annotations
+      - "highlightIds" (array) - OPTIONAL
+      - "retainedLabelIds" (array) - OPTIONAL
+
+      **INCORRECT (will break the app):**
+      [{"step": 1, "origin": {...}}]
+
+      **CORRECT:**
+      {"explanation": "...", "whiteboard": [{"stepName": "Introduction", "origin": {...}, "annotations": [], ...}]}
 
       **Schema Adherence (MANDATORY)**
       You must respond with a single, valid JSON object that strictly adheres to the provided schema. Do not include any extra text, explanations, or markdown formatting outside of the JSON object. The JSON should start with \`\`\`json and end with \`\`\`.

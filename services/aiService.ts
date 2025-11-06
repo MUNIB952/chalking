@@ -289,9 +289,28 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
           -   Use arrows, labels, and positioning to demonstrate relationships
           -   Create a "big picture" step at the end showing how all concepts fit together
 
-      **CRITICAL OUTPUT REQUIREMENTS (MANDATORY)**
+      **CRITICAL: JSON STRUCTURE REQUIREMENTS (MANDATORY)**
 
-      You may think as much as you need, but your FINAL OUTPUT must be ONLY a valid JSON object, nothing else.
+      YOUR RESPONSE **MUST** BE A JSON OBJECT WITH EXACTLY TWO TOP-LEVEL KEYS:
+      1. "explanation" (string) - A high-level summary of the entire lesson
+      2. "whiteboard" (array) - Array of step objects
+
+      DO NOT return a plain array! DO NOT wrap in markdown code blocks!
+
+      **MANDATORY FIELDS IN EACH STEP:**
+      - "origin" (object with x, y numbers) - REQUIRED
+      - "stepName" (string) - REQUIRED, 2-5 words (e.g., "Introduction", "Core Concept")
+      - "explanation" (string) - REQUIRED
+      - "drawingPlan" (array or null) - REQUIRED
+      - "annotations" (array) - REQUIRED, use empty array [] if no annotations
+      - "highlightIds" (array) - OPTIONAL
+      - "retainedLabelIds" (array) - OPTIONAL
+
+      **INCORRECT (will break the app):**
+      [{"step": 1, "origin": {...}}]
+
+      **CORRECT:**
+      {"explanation": "...", "whiteboard": [{"stepName": "Introduction", "origin": {...}, "annotations": [], ...}]}
 
       **EXACT JSON SCHEMA YOU MUST FOLLOW:**
 
@@ -300,8 +319,8 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
         "whiteboard": [
           {
             "origin": { "x": number, "y": number },
-            "stepName": "string - SHORT name for this step (2-5 words, e.g., 'Introduction', 'Building Blocks', 'Final Concept')",
-            "explanation": "string - what you'll say during this step",
+            "stepName": "string - SHORT name for this step (2-5 words, e.g., 'Introduction', 'Building Blocks', 'Final Concept') - REQUIRED",
+            "explanation": "string - what you'll say during this step - REQUIRED",
             "drawingPlan": [
               { "type": "circle", "center": { "x": number, "y": number }, "radius": number, "color": "#hex", "id": "string", "isFilled": boolean },
               { "type": "rectangle", "center": { "x": number, "y": number }, "width": number, "height": number, "color": "#hex", "id": "string", "isFilled": boolean },
@@ -331,9 +350,16 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
             ],
             "annotations": [
               { "type": "text", "text": "Drawbridge", "point": { "x": 0, "y": -50 }, "fontSize": 24, "color": "#FFFFFF", "id": "label_bridge" }
+            ]
+          },
+          {
+            "origin": { "x": 2000, "y": 0 },
+            "stepName": "Adding Motion",
+            "explanation": "Now we raise the bridge to stop the traffic.",
+            "drawingPlan": [
+              { "type": "rectangle", "center": { "x": 0, "y": -100 }, "width": 400, "height": 20, "color": "#06b6d4", "id": "bridge_raised" }
             ],
-            "highlightIds": [],
-            "retainedLabelIds": []
+            "annotations": []
           }
         ]
       }
