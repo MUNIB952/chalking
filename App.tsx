@@ -313,30 +313,30 @@ const App: React.FC = () => {
   }, [whiteboardSteps]);
   
   const handleTogglePause = useCallback(() => {
-    console.log(`[PAUSE BUTTON] Clicked! status=${status}, isPaused=${isPaused}`);
+    if (status === 'DRAWING') {
+      const willBePaused = !isPaused;
 
-    if (status !== 'DRAWING') {
-      console.log('[PAUSE BUTTON] Not in DRAWING state, ignoring');
-      return;
-    }
+      if (willBePaused) {
+        // Pausing: Save current animation progress and stop this step's audio
+        pausedProgressRef.current = animationProgress;
+        pausedAtRef.current = performance.now();
 
-    const willBePaused = !isPaused;
-    console.log(`[PAUSE BUTTON] Will change: ${isPaused} -> ${willBePaused}`);
+        if (audioSourceRef.current) {
+          console.log(`Pausing at progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
 
-    if (willBePaused) {
-      // PAUSING: Save state and trigger cleanup via React
-      pausedProgressRef.current = animationProgress;
-      pausedAtRef.current = performance.now();
-      console.log(`[PAUSE BUTTON] Saved progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+          try {
+            audioSourceRef.current.stop();
+          } catch (e) {
+            console.log('Audio source already stopped');
+          }
+          audioSourceRef.current = null;
+        }
+      } else {
+        // Resuming: Log that we're resuming from saved progress
+        console.log(`Resuming from progress: ${(pausedProgressRef.current * 100).toFixed(1)}%`);
+      }
 
-      // Set isPaused to trigger useEffect cleanup (which will stop everything)
-      setIsPaused(true);
-      console.log('[PAUSE BUTTON] Set isPaused=true, useEffect cleanup will run');
-    } else {
-      // RESUMING: useEffect will restart from saved progress
-      console.log(`[PAUSE BUTTON] Resuming from ${(pausedProgressRef.current * 100).toFixed(1)}%`);
-      setIsPaused(false);
-      console.log('[PAUSE BUTTON] Set isPaused=false, useEffect will restart');
+      setIsPaused(willBePaused);
     }
   }, [status, isPaused, animationProgress]);
   
@@ -464,31 +464,18 @@ const App: React.FC = () => {
     
     runStep();
 
-    // CLEANUP: This runs when isPaused changes, step changes, or component unmounts
     return () => {
-      console.log('[CLEANUP] useEffect cleanup running - cancelling step');
       isCancelled = true;
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
 
-      // Clear all pending operations
-      if (animationFrameRef.current) {
-        console.log('[CLEANUP] Cancelling animation frame');
-        cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-      if (stepTimeoutRef.current) {
-        console.log('[CLEANUP] Clearing step timeout');
-        clearTimeout(stepTimeoutRef.current);
-        stepTimeoutRef.current = null;
-      }
-
-      // CRITICAL: Stop audio immediately when cleanup runs
-      // This stops the audio when pause is clicked or when switching steps
+      // Stop current step's audio when moving to next step
+      // Each step has its own audio file, so we stop the current one
       if (audioSourceRef.current) {
-        console.log('[CLEANUP] Stopping audio source');
         try {
           audioSourceRef.current.stop();
         } catch (e) {
-          console.log('[CLEANUP] Audio already stopped');
+          // Audio already stopped
         }
         audioSourceRef.current = null;
       }
@@ -498,17 +485,12 @@ const App: React.FC = () => {
   // Handle mute/unmute
   useEffect(() => {
     if (gainNodeRef.current) {
-      const newValue = isMuted ? 0 : 1;
-      gainNodeRef.current.gain.value = newValue;
-      console.log(`[MUTE] Audio ${isMuted ? 'MUTED' : 'UNMUTED'} (gain: ${newValue})`);
+      gainNodeRef.current.gain.value = isMuted ? 0 : 1;
     }
   }, [isMuted]);
 
   const handleToggleMute = useCallback(() => {
-    setIsMuted(prev => {
-      console.log(`[MUTE] Toggling mute: ${prev} -> ${!prev}`);
-      return !prev;
-    });
+    setIsMuted(prev => !prev);
   }, []);
 
   return (
