@@ -752,10 +752,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full relative pointer-events-none z-0" onMouseLeave={handleMouseUp} onMouseUp={handleMouseUp} >
+    <div className="w-full h-full relative" onMouseLeave={handleMouseUp} onMouseUp={handleMouseUp} >
         <canvas
             ref={canvasRef}
-            className={`w-full h-full pointer-events-auto ${cursorClass}`}
+            className={`w-full h-full ${cursorClass}`}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             role="img"
