@@ -81,7 +81,7 @@ export default async function handler(
       input: { text: text },
       voice: {
         languageCode: 'en-US',
-        name: 'en-US-Neural2-F', // Natural female voice (Neural2 quality)
+        name: 'en-US-Wavenet-C', // Expressive female voice (WaveNet - more emotional than Neural2)
       },
       audioConfig: {
         audioEncoding: 'LINEAR16',

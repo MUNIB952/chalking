@@ -6,7 +6,7 @@ import {
   ExpandIcon, CollapseIcon, RepeatIcon, MuteIcon, UnmuteIcon, SendIcon, PlayIcon, PauseIcon
 } from './icons';
 
-interface ControlsProps {
+interface ComposerProps {
   status: AppStatus;
   explanation: string;
   error: string | null;
@@ -85,7 +85,7 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
   );
 };
 
-export const Controls: React.FC<ControlsProps> = ({
+export const Composer: React.FC<ComposerProps> = ({
   status,
   explanation,
   error,

@@ -70,7 +70,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
 
     console.log('✅ Generated PCM base64 audio length:', data.audio.length);
     console.log('   Audio format: LINEAR16 PCM, 24kHz');
-    console.log('   Voice: en-US-Neural2-F (Neural2 quality)');
+    console.log('   Voice: en-US-Wavenet-C (WaveNet - more emotional)');
     console.log('   Duration:', data.duration?.toFixed(2), 'seconds');
 
     return data.audio;

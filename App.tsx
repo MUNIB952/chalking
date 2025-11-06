@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
-import { Controls } from './components/Controls';
+import { Composer } from './components/Composer';
 import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { FocusIcon } from './components/icons';
@@ -528,7 +528,7 @@ const App: React.FC = () => {
             explanation={explanation}
             onFocusRequest
         />
-        <Controls
+        <Composer
             status={status}
             explanation={explanation}
             error={error}
