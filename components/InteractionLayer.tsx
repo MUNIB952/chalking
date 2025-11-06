@@ -132,9 +132,8 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
   return (
     <div
       ref={layerRef}
-      className="absolute top-0 left-0 right-0"
+      className="absolute inset-0"
       style={{
-        bottom: '200px', // Stop 200px from bottom - don't overlap Composer
         zIndex: 5,
         pointerEvents: isInteractive ? 'auto' : 'none',
         cursor: cursorStyle,

@@ -158,9 +158,9 @@ export const Composer: React.FC<ComposerProps> = ({
   return (
     <div
       className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px] z-50"
-      style={{ isolation: 'isolate', pointerEvents: 'auto' }}
+      style={{ pointerEvents: 'none' }}
     >
-      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
+      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1" style={{ pointerEvents: 'auto' }}>
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between h-12">
