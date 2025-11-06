@@ -24,8 +24,8 @@ export const InteractionLayer: React.FC<InteractionLayerProps> = ({ status }) =>
   // Get Canvas transform setter from window
   const setCanvasTransform = (window as any).__setCanvasViewTransform;
 
-  // OLD STRATEGY: Lock canvas during DRAWING - only interactive when DONE
-  const isInteractive = status !== 'THINKING' && status !== 'DRAWING' && status !== 'PREPARING';
+  // Interactive during DRAWING and DONE - buttons work because Composer is at z-50 (higher than z-5)
+  const isInteractive = status !== 'THINKING' && status !== 'PREPARING';
 
   // Mouse handlers
   const handleMouseDown = useCallback((e: React.MouseEvent) => {

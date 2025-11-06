@@ -102,7 +102,7 @@ export const Composer: React.FC<ComposerProps> = ({
   const [inputValue, setInputValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const isInputDisabled = status === 'THINKING' || status === 'PREPARING' || status === 'DRAWING';
+  const isInputDisabled = status === 'THINKING' || status === 'PREPARING';
   const showIdleState = status === 'IDLE' || status === 'DONE' || status === 'ERROR';
   const showProgress = status === 'DRAWING' || status === 'DONE';
   const showTranscript = status === 'DRAWING';
@@ -170,28 +170,28 @@ export const Composer: React.FC<ComposerProps> = ({
           </div>
 
           {/* Control Buttons - RIGHT */}
-          <div className="flex-shrink-0 flex items-center">
+          <div className="flex-shrink-0 flex items-center gap-1 mr-1">
             <button
               onClick={onToggleMute}
-              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
             >
               {isMuted ? <MuteIcon className="w-5 h-5" /> : <UnmuteIcon className="w-5 h-5" />}
             </button>
             <button
               onClick={onRepeat}
-              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
             >
               <RepeatIcon className="w-5 h-5" />
             </button>
             <button
               onClick={onTogglePause}
-              className="p-1.5 rounded-full text-slate-300 hover:text-white hover:bg-slate-700/60 transition-colors"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
             >
               {isPaused ? <PlayIcon className="w-5 h-5" /> : <PauseIcon className="w-5 h-5" />}
             </button>
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="p-1.5 rounded-full text-slate-400 hover:text-white hover:bg-slate-700/60 transition-colors"
+              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
             >
               {isExpanded ? <CollapseIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
             </button>
@@ -199,8 +199,15 @@ export const Composer: React.FC<ComposerProps> = ({
         </div>
 
         {/* Collapsible Content - Transcript and Input Field */}
-        {isExpanded && (
-          <div className="mt-1.5">
+        <div
+          className="overflow-hidden transition-all duration-500 ease-in-out"
+          style={{
+            maxHeight: isExpanded ? '500px' : '0',
+            opacity: isExpanded ? 1 : 0,
+            marginTop: isExpanded ? '6px' : '0'
+          }}
+        >
+          <div>
             {/* Row 2: Transcript - Only during DRAWING */}
             {showTranscript && explanation && (
               <div className="mb-1.5 px-2">
@@ -231,7 +238,7 @@ export const Composer: React.FC<ComposerProps> = ({
               </button>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
