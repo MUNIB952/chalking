@@ -270,7 +270,7 @@ const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, an
   ctx.lineJoin = 'round';
   ctx.fillStyle = defaultColor;
 
-  const allItems = [...(step.drawingPlan || []), ...step.annotations];
+  const allItems = [...(step.drawingPlan || []), ...(step.annotations || [])];
   const itemsToDraw = idsToExclude 
       ? allItems.filter(item => !item.id || !idsToExclude.has(item.id))
       : allItems;
@@ -492,7 +492,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     for (let i = 0; i < resolvedSteps.length; i++) {
         const step = resolvedSteps[i];
         if (!step) continue;
-        const allItems = [...(step.drawingPlan || []), ...step.annotations];
+        const allItems = [...(step.drawingPlan || []), ...(step.annotations || [])];
         for (const item of allItems) {
             if (item.id) {
                 map.set(item.id, { ...item, stepOrigin: step.origin });
