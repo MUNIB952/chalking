@@ -458,7 +458,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     for (const step of newSteps) {
         const origin = step.origin as AbsolutePoint;
-        const allItems: (DrawingCommand | Annotation)[] = [...(step.drawingPlan || []), ...step.annotations];
+        const allItems: (DrawingCommand | Annotation)[] = [...(step.drawingPlan || []), ...(step.annotations || [])];
         
         for (const item of allItems) {
             if ('center' in item && item.center) item.center = resolvePoint(item.center, origin);
@@ -477,7 +477,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   const currentStepItemIds = useMemo(() => {
     const itemSet = new Set<string>();
     if (!currentStep) return itemSet;
-    const allItems = [...(currentStep.drawingPlan || []), ...currentStep.annotations];
+    const allItems = [...(currentStep.drawingPlan || []), ...(currentStep.annotations || [])];
     for (const item of allItems) {
         if (item.id) {
             itemSet.add(item.id);
