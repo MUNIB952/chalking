@@ -67,17 +67,18 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 };
 
 /**
- * Generate speech using AI Studio TTS (MUCH better quotas than Vertex AI TTS)
+ * Generate speech using Cloud Text-to-Speech API (Production, 1,000 RPM quota)
+ * Uses your $300 GCP credit
  */
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
   try {
-    console.log('🎤 Generating speech with AI Studio TTS (Gemini 2.5 Flash - UNLIMITED QUOTA)');
+    console.log('🎤 Generating speech with Cloud Text-to-Speech API (1,000 RPM quota)');
     console.log('  Text length:', text.length, 'characters');
 
-    // Use AI Studio TTS (better quotas than Vertex AI preview TTS!)
-    const response = await fetch('/api/generate-speech-ai-studio', {
+    // Call Cloud TTS via serverless function (production API, great quotas!)
+    const response = await fetch('/api/generate-speech', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,7 +88,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('AI Studio TTS error:', errorData);
+      console.error('Cloud TTS error:', errorData);
       return null;
     }
 
