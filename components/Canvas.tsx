@@ -753,7 +753,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   return (
     <div
-      className="w-full h-full relative z-0"
+      className="absolute inset-0 z-0"
       onMouseLeave={handleMouseUp}
       onMouseUp={handleMouseUp}
     >
