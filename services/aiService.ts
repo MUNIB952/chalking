@@ -376,54 +376,19 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 };
 
 
+// Import Cloud TTS service (uses Vertex AI with 1000 req/min rate limit)
+import * as CloudTTS from './cloudTTSService';
+
+/**
+ * Generate speech using Cloud Text-to-Speech API
+ * Now using production-ready Cloud TTS instead of Gemini TTS preview
+ *
+ * Benefits:
+ * - 1,000 requests/minute (vs 10/min with Gemini)
+ * - Production-ready, stable API
+ * - Clear pricing: $16 per 1M characters (WaveNet)
+ * - Uses existing Vertex AI service account
+ */
 export const generateSpeech = async (text: string): Promise<string | null> => {
-  if (!text) return null;
-
-  try {
-    console.log('🎤 Generating speech with Gemini TTS for text:', text.substring(0, 100) + '...');
-    console.log('  Text length:', text.length, 'characters');
-
-    // Use Gemini 2.5 Flash TTS - returns raw PCM base64 directly!
-    const response = await gemini.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
-      contents: [{ parts: [{ text: text }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-          voiceConfig: {
-            prebuiltVoiceConfig: { voiceName: 'Kore' }, // Natural female voice
-          },
-        },
-      },
-    });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-
-    if (!base64Audio) {
-      console.error("❌ Gemini TTS returned no audio data");
-      console.error("  Response structure:", JSON.stringify({
-        hasCandidates: !!response.candidates,
-        candidateCount: response.candidates?.length,
-        firstCandidate: response.candidates?.[0] ? 'exists' : 'missing',
-        usageMetadata: response.usageMetadata
-      }, null, 2));
-      return null;
-    }
-
-    console.log('✅ Generated PCM base64 audio length:', base64Audio.length);
-
-    // Log TTS metadata
-    if (response.usageMetadata) {
-      console.log('📊 TTS USAGE:');
-      console.log('  Input characters:', text.length);
-      console.log('  Audio data size:', base64Audio.length, 'bytes (base64)');
-      console.log('  Usage metadata:', response.usageMetadata);
-    }
-
-    return base64Audio;
-
-  } catch (e) {
-    console.error("Gemini speech generation failed:", e);
-    return null;
-  }
+  return CloudTTS.generateSpeech(text);
 };

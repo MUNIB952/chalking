@@ -87,7 +87,7 @@ const App: React.FC = () => {
   const playbackOffsetRef = useRef<number>(0);
   const pausedProgressRef = useRef<number>(0); // Tracks visual animation progress when paused
   const pausedAtRef = useRef<number>(0); // Timestamp when paused
-  const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(10)); // 10 calls per minute
+  const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(1000)); // Cloud TTS: 1000 calls per minute
   const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
 
   const [animationProgress, setAnimationProgress] = useState(0);
@@ -189,9 +189,9 @@ const App: React.FC = () => {
       overallExplanationRef.current = response.explanation;
       setWhiteboardSteps(response.whiteboard);
 
-      // Start generating audio PROGRESSIVELY with rate limiting
-      console.log(`Starting progressive audio generation for ${response.whiteboard.length} steps...`);
-      console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute`);
+      // Start generating audio with Cloud TTS (1000 calls/minute - no batching needed!)
+      console.log(`🚀 Generating audio for all ${response.whiteboard.length} steps simultaneously...`);
+      console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute (Cloud TTS)`);
 
       // Helper function to generate and process audio for a single step
       const generateStepAudio = async (step: WhiteboardStep, index: number) => {
@@ -203,7 +203,7 @@ const App: React.FC = () => {
         console.log(`[Step ${index}] Starting audio generation...`);
 
         try {
-          // Use rate limiter to respect API quota (10 calls/minute)
+          // Use rate limiter - with Cloud TTS (1000/min), all steps complete in seconds
           const audio = await rateLimiterRef.current.execute(() =>
             generateSpeech(step.explanation)
           );
@@ -250,29 +250,19 @@ const App: React.FC = () => {
       setExplanation(response.explanation);
       setStatus('DRAWING');
 
-      // Generate remaining steps in background with smart batching
-      // Batch 1: Queue up to 9 more requests immediately (total 10 in first minute)
-      // Batch 2+: Queue remaining requests after 60 seconds
+      // With Cloud TTS (1000/min), generate ALL remaining steps immediately in parallel
+      // No need for batching - all audio will be ready in seconds
       (async () => {
         const totalSteps = response.whiteboard.length;
-        const firstBatchSize = Math.min(10, totalSteps); // Up to 10 in first batch (including step 0)
 
-        // Queue next 9 steps immediately (step 0 already done)
-        console.log(`Queueing steps 1-${firstBatchSize - 1} for immediate generation...`);
-        for (let i = 1; i < firstBatchSize; i++) {
+        console.log(`🎤 Queueing all remaining ${totalSteps - 1} steps for immediate generation...`);
+
+        // Generate all remaining steps in parallel (step 0 already done)
+        for (let i = 1; i < totalSteps; i++) {
           generateStepAudio(response.whiteboard[i], i);
         }
 
-        // If there are more steps, queue them after 60 seconds
-        if (totalSteps > firstBatchSize) {
-          console.log(`Will queue steps ${firstBatchSize}-${totalSteps - 1} after 60 seconds...`);
-          await new Promise(resolve => setTimeout(resolve, 60000)); // Wait 60 seconds
-
-          console.log(`Queueing remaining ${totalSteps - firstBatchSize} steps...`);
-          for (let i = firstBatchSize; i < totalSteps; i++) {
-            generateStepAudio(response.whiteboard[i], i);
-          }
-        }
+        console.log(`✅ All ${totalSteps} audio generation requests queued! (Cloud TTS rate: 1000/min)`);
       })();
 
     } catch (err) {
