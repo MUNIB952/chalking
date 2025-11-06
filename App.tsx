@@ -2,6 +2,7 @@
 
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
+import { InteractionLayer } from './components/InteractionLayer';
 import { Composer } from './components/Composer';
 import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
@@ -528,6 +529,7 @@ const App: React.FC = () => {
             explanation={explanation}
             onFocusRequest
         />
+        <InteractionLayer status={status} />
         <Composer
             status={status}
             explanation={explanation}

@@ -388,13 +388,12 @@ export const Canvas: React.FC<CanvasProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, zoom: 1 });
-  const [isPanning, setIsPanning] = useState(false);
-  const lastPanPoint = useRef({ x: 0, y: 0 });
   const penTipPosition = useRef<Point | null>(null);
 
-  // Always allow interaction during DRAWING and DONE, disable only during THINKING/PREPARING
-  const isInteractive = useMemo(() => status !== 'THINKING' && status !== 'PREPARING', [status]);
-  const cursorClass = isPanning ? 'grabbing-cursor' : (isInteractive ? 'grab-cursor' : 'wait-cursor');
+  // Expose setViewTransform for InteractionLayer
+  useEffect(() => {
+    (window as any).__setCanvasViewTransform = setViewTransform;
+  }, []);
   
   const showLoader = useMemo(() => status === 'THINKING' || status === 'PREPARING', [status]);
 
@@ -623,8 +622,6 @@ export const Canvas: React.FC<CanvasProps> = ({
     const canvas = canvasRef.current;
     if (!canvas || !currentStep) return;
 
-    setIsPanning(false); // Stop any ongoing pan
-
     const rect = canvas.getBoundingClientRect();
     const focalPoint = penTipPosition.current || currentStep.origin;
 
@@ -668,7 +665,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
 
     const canvas = canvasRef.current;
-    if (canvas && !isPanning) {
+    if (canvas) {
       const rect = canvas.getBoundingClientRect();
       const focalPoint = penTipPosition.current || currentStep.origin;
 
@@ -692,130 +689,16 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
     }
     
-  }, [currentStep, animationProgress, status, isPanning, isPaused]);
-
-  // Check if click is within Composer bounds to avoid intercepting its events
-  const isClickInComposer = useCallback((clientX: number, clientY: number): boolean => {
-    // Composer is at bottom of screen - check if click is in bottom area
-    const viewportHeight = window.innerHeight;
-    const composerZoneHeight = 200; // Approximate Composer height + margin
-    return clientY > viewportHeight - composerZoneHeight;
-  }, []);
-
-  // Handle wheel events with passive: false to allow preventDefault
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const handleWheelNative = (e: WheelEvent) => {
-      if (!isInteractive) return;
-
-      // Don't handle wheel if mouse is in Composer area
-      if (isClickInComposer(e.clientX, e.clientY)) {
-        return;
-      }
-
-      e.preventDefault();
-
-      const rect = canvas.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      const zoomFactor = 1.1;
-      const newZoom = e.deltaY < 0 ? viewTransform.zoom * zoomFactor : viewTransform.zoom / zoomFactor;
-      const clampedZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-
-      if (clampedZoom === viewTransform.zoom) return;
-
-      const worldX = (mouseX - viewTransform.x) / viewTransform.zoom;
-      const worldY = (mouseY - viewTransform.y) / viewTransform.zoom;
-
-      const newX = mouseX - worldX * clampedZoom;
-      const newY = mouseY - worldY * clampedZoom;
-
-      setViewTransform({ x: newX, y: newY, zoom: clampedZoom });
-    };
-
-    canvas.addEventListener('wheel', handleWheelNative, { passive: false });
-
-    return () => {
-      canvas.removeEventListener('wheel', handleWheelNative);
-    };
-  }, [isInteractive, viewTransform, isClickInComposer]);
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (!isInteractive) return;
-
-    // Don't handle if click is in Composer area
-    if (isClickInComposer(e.clientX, e.clientY)) {
-      return;
-    }
-
-    setIsPanning(true);
-    lastPanPoint.current = { x: e.clientX, y: e.clientY };
-  }, [isInteractive, isClickInComposer]);
-
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isPanning) return;
-    const dx = e.clientX - lastPanPoint.current.x;
-    const dy = e.clientY - lastPanPoint.current.y;
-    lastPanPoint.current = { x: e.clientX, y: e.clientY };
-    setViewTransform(prev => ({
-      ...prev,
-      x: prev.x + dx,
-      y: prev.y + dy,
-    }));
-  }, [isPanning]);
-
-  const handleMouseUp = useCallback(() => {
-    setIsPanning(false);
-  }, []);
-
-  // Touch event handlers with same Composer bounds checking
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (!isInteractive || e.touches.length === 0) return;
-
-    const touch = e.touches[0];
-    if (isClickInComposer(touch.clientX, touch.clientY)) {
-      return;
-    }
-
-    setIsPanning(true);
-    lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
-  }, [isInteractive, isClickInComposer]);
-
-  const handleTouchMove = useCallback((e: React.TouchEvent) => {
-    if (!isPanning || e.touches.length === 0) return;
-
-    const touch = e.touches[0];
-    const dx = touch.clientX - lastPanPoint.current.x;
-    const dy = touch.clientY - lastPanPoint.current.y;
-    lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
-    setViewTransform(prev => ({
-      ...prev,
-      x: prev.x + dx,
-      y: prev.y + dy,
-    }));
-  }, [isPanning]);
-
-  const handleTouchEnd = useCallback(() => {
-    setIsPanning(false);
-  }, []);
+  }, [currentStep, animationProgress, status, isPaused]);
 
   return (
     <div
       className="absolute inset-0 z-0"
+      style={{ pointerEvents: 'none' }}
     >
         <canvas
             ref={canvasRef}
-            className={`w-full h-full ${cursorClass}`}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseUp}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
+            className="w-full h-full"
             role="img"
             aria-label={explanation}
         />
