@@ -147,8 +147,8 @@ export const Controls: React.FC<ControlsProps> = ({
         onMouseUp={(e) => e.stopPropagation()}
         onTouchStart={(e) => e.stopPropagation()}
         onTouchEnd={(e) => e.stopPropagation()}
-        className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-700 cursor-pointer ${className || ''}`}
-        style={{ touchAction: 'manipulation', zIndex: 10 }}
+        className={`p-3 w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 cursor-pointer ${className || ''}`}
+        style={{ touchAction: 'manipulation', zIndex: 10, pointerEvents: 'auto' }}
       >
         {children}
       </button>
@@ -160,7 +160,7 @@ export const Controls: React.FC<ControlsProps> = ({
       className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px] z-50"
       style={{ isolation: 'isolate', pointerEvents: 'auto' }}
     >
-      <div className="bg-[#101010] border border-[#1F51FF]/50 hover:border-[#1F51FF] rounded-2xl p-1 transition-all duration-300">
+      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between h-12">
@@ -179,10 +179,11 @@ export const Controls: React.FC<ControlsProps> = ({
                 <div className="w-full max-w-md">
                   <div className="w-full bg-neutral-800 rounded-full h-1.5 overflow-hidden">
                     <div
-                      className="h-full rounded-full transition-all duration-500 ease-out"
+                      className="h-full rounded-full"
                       style={{
                         width: `${progressPercentage}%`,
-                        backgroundColor: '#1F51FF'
+                        backgroundColor: '#1F51FF',
+                        transition: 'width 0.3s linear'
                       }}
                     ></div>
                   </div>
