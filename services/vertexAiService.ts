@@ -67,17 +67,17 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 };
 
 /**
- * Generate speech using Cloud TTS via Vercel serverless function
+ * Generate speech using AI Studio TTS (MUCH better quotas than Vertex AI TTS)
  */
 export const generateSpeech = async (text: string): Promise<string | null> => {
   if (!text) return null;
 
   try {
-    console.log('🎤 Generating speech with Cloud TTS via serverless function');
+    console.log('🎤 Generating speech with AI Studio TTS (Gemini 2.5 Flash - UNLIMITED QUOTA)');
     console.log('  Text length:', text.length, 'characters');
 
-    // Call Vercel serverless function
-    const response = await fetch('/api/generate-speech', {
+    // Use AI Studio TTS (better quotas than Vertex AI preview TTS!)
+    const response = await fetch('/api/generate-speech-ai-studio', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -87,7 +87,7 @@ export const generateSpeech = async (text: string): Promise<string | null> => {
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error('TTS serverless function error:', errorData);
+      console.error('AI Studio TTS error:', errorData);
       return null;
     }
 
