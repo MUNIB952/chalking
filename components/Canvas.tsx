@@ -701,6 +701,12 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     const handleWheelNative = (e: WheelEvent) => {
       if (!isInteractive) return;
+
+      // Don't handle wheel if mouse is in Composer area
+      if (isClickInComposer(e.clientX, e.clientY)) {
+        return;
+      }
+
       e.preventDefault();
 
       const rect = canvas.getBoundingClientRect();
@@ -727,13 +733,27 @@ export const Canvas: React.FC<CanvasProps> = ({
     return () => {
       canvas.removeEventListener('wheel', handleWheelNative);
     };
-  }, [isInteractive, viewTransform]);
+  }, [isInteractive, viewTransform, isClickInComposer]);
+
+  // Check if click is within Composer bounds to avoid intercepting its events
+  const isClickInComposer = useCallback((clientX: number, clientY: number): boolean => {
+    // Composer is at bottom of screen - check if click is in bottom area
+    const viewportHeight = window.innerHeight;
+    const composerZoneHeight = 200; // Approximate Composer height + margin
+    return clientY > viewportHeight - composerZoneHeight;
+  }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!isInteractive) return;
+
+    // Don't handle if click is in Composer area
+    if (isClickInComposer(e.clientX, e.clientY)) {
+      return;
+    }
+
     setIsPanning(true);
     lastPanPoint.current = { x: e.clientX, y: e.clientY };
-  }, [isInteractive]);
+  }, [isInteractive, isClickInComposer]);
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     if (!isPanning) return;
@@ -751,19 +771,51 @@ export const Canvas: React.FC<CanvasProps> = ({
     setIsPanning(false);
   }, []);
 
+  // Touch event handlers with same Composer bounds checking
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (!isInteractive || e.touches.length === 0) return;
+
+    const touch = e.touches[0];
+    if (isClickInComposer(touch.clientX, touch.clientY)) {
+      return;
+    }
+
+    setIsPanning(true);
+    lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
+  }, [isInteractive, isClickInComposer]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!isPanning || e.touches.length === 0) return;
+
+    const touch = e.touches[0];
+    const dx = touch.clientX - lastPanPoint.current.x;
+    const dy = touch.clientY - lastPanPoint.current.y;
+    lastPanPoint.current = { x: touch.clientX, y: touch.clientY };
+    setViewTransform(prev => ({
+      ...prev,
+      x: prev.x + dx,
+      y: prev.y + dy,
+    }));
+  }, [isPanning]);
+
+  const handleTouchEnd = useCallback(() => {
+    setIsPanning(false);
+  }, []);
+
   return (
     <div
       className="absolute inset-0 z-0"
-      style={{ pointerEvents: 'none' }}
     >
         <canvas
             ref={canvasRef}
             className={`w-full h-full ${cursorClass}`}
-            style={{ pointerEvents: 'auto' }}
             onMouseDown={handleMouseDown}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             role="img"
             aria-label={explanation}
         />
