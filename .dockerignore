@@ -30,3 +30,16 @@ Thumbs.db
 .prettierrc
 .eslintrc
 new.txt
+
+# Vercel (not needed for Cloud Run)
+.vercel
+vercel.json
+api/
+
+# Google Cloud
+.gcloudignore
+cloudbuild.yaml
+
+# Docker
+Dockerfile
+.dockerignore
