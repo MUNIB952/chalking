@@ -694,6 +694,14 @@ export const Canvas: React.FC<CanvasProps> = ({
     
   }, [currentStep, animationProgress, status, isPanning, isPaused]);
 
+  // Check if click is within Composer bounds to avoid intercepting its events
+  const isClickInComposer = useCallback((clientX: number, clientY: number): boolean => {
+    // Composer is at bottom of screen - check if click is in bottom area
+    const viewportHeight = window.innerHeight;
+    const composerZoneHeight = 200; // Approximate Composer height + margin
+    return clientY > viewportHeight - composerZoneHeight;
+  }, []);
+
   // Handle wheel events with passive: false to allow preventDefault
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -734,14 +742,6 @@ export const Canvas: React.FC<CanvasProps> = ({
       canvas.removeEventListener('wheel', handleWheelNative);
     };
   }, [isInteractive, viewTransform, isClickInComposer]);
-
-  // Check if click is within Composer bounds to avoid intercepting its events
-  const isClickInComposer = useCallback((clientX: number, clientY: number): boolean => {
-    // Composer is at bottom of screen - check if click is in bottom area
-    const viewportHeight = window.innerHeight;
-    const composerZoneHeight = 200; // Approximate Composer height + margin
-    return clientY > viewportHeight - composerZoneHeight;
-  }, []);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!isInteractive) return;
