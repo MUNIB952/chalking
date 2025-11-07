@@ -9,17 +9,6 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Accept build arguments
-ARG VITE_GEMINI_API_KEY
-ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
-
-# Debug: Check if API key is set (shows only length, not value)
-RUN if [ -n "$VITE_GEMINI_API_KEY" ]; then \
-      echo "API key is set (length: $(echo -n $VITE_GEMINI_API_KEY | wc -c) chars)"; \
-    else \
-      echo "WARNING: API key is NOT set!"; \
-    fi
-
 # Copy package files
 COPY package*.json ./
 
@@ -29,7 +18,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Vite app (Vite will embed VITE_GEMINI_API_KEY)
+# Build the Vite app
+# Note: No API keys needed - all API calls go through server-side endpoints
 RUN npm run build
 
 # ========================================
