@@ -13,6 +13,13 @@ WORKDIR /app
 ARG VITE_GEMINI_API_KEY
 ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
 
+# Debug: Check if API key is set (shows only length, not value)
+RUN if [ -n "$VITE_GEMINI_API_KEY" ]; then \
+      echo "API key is set (length: $(echo -n $VITE_GEMINI_API_KEY | wc -c) chars)"; \
+    else \
+      echo "WARNING: API key is NOT set!"; \
+    fi
+
 # Copy package files
 COPY package*.json ./
 
