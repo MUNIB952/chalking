@@ -1,0 +1,65 @@
+# Google Cloud Build Configuration
+# This file enables automatic deployments from GitHub to Cloud Run
+#
+# Trigger: Push to main/master branch
+# Actions:
+#   1. Build Docker image
+#   2. Push to Google Container Registry
+#   3. Deploy to Cloud Run with environment variables
+
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/chalking:$COMMIT_SHA'
+      - '-t'
+      - 'gcr.io/$PROJECT_ID/chalking:latest'
+      - '.'
+    id: 'build-image'
+
+  # Step 2: Push the Docker image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/chalking:$COMMIT_SHA'
+    id: 'push-image'
+
+  # Step 3: Push the latest tag
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - 'gcr.io/$PROJECT_ID/chalking:latest'
+    id: 'push-latest'
+
+  # Step 4: Deploy to Cloud Run
+  - name: 'gcr.io/cloud-builders/gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'chalking'
+      - '--image=gcr.io/$PROJECT_ID/chalking:$COMMIT_SHA'
+      - '--platform=managed'
+      - '--region=us-central1'
+      - '--allow-unauthenticated'
+      - '--memory=512Mi'
+      - '--cpu=1'
+      - '--min-instances=0'
+      - '--max-instances=10'
+      - '--set-env-vars=NODE_ENV=production'
+      - '--set-secrets=GCP_SERVICE_ACCOUNT_JSON=gcp-service-account:latest,GCP_PROJECT_ID=gcp-project-id:latest'
+    id: 'deploy-cloud-run'
+
+# Images to store in Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/chalking:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/chalking:latest'
+
+# Build timeout
+timeout: '1200s'
+
+# Options
+options:
+  machineType: 'N1_HIGHCPU_8'
+  logging: CLOUD_LOGGING_ONLY
