@@ -9,6 +9,10 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Accept build arguments
+ARG VITE_GEMINI_API_KEY
+ENV VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY
+
 # Copy package files
 COPY package*.json ./
 
@@ -18,7 +22,7 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the Vite app
+# Build the Vite app (Vite will embed VITE_GEMINI_API_KEY)
 RUN npm run build
 
 # ========================================

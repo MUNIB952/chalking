@@ -12,11 +12,14 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'build'
+      - '--build-arg'
+      - 'VITE_GEMINI_API_KEY=$$GEMINI_API_KEY'
       - '-t'
       - 'gcr.io/$PROJECT_ID/chalking:$COMMIT_SHA'
       - '-t'
       - 'gcr.io/$PROJECT_ID/chalking:latest'
       - '.'
+    secretEnv: ['GEMINI_API_KEY']
     id: 'build-image'
 
   # Step 2: Push the Docker image to Container Registry
@@ -63,3 +66,9 @@ timeout: '1200s'
 options:
   machineType: 'N1_HIGHCPU_8'
   logging: CLOUD_LOGGING_ONLY
+
+# Available secrets from Secret Manager
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_ID/secrets/gemini-api-key/versions/latest
+      env: 'GEMINI_API_KEY'
