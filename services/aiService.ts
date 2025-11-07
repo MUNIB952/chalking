@@ -1,12 +1,11 @@
 
 
-import { GoogleGenAI, Modality } from "@google/genai";
+import { Modality } from "@google/genai";
 import { AIResponse } from '../types';
+import { vertexAI } from './vertexAIClient';
 
-// Initialize Gemini AI client
-const gemini = new GoogleGenAI({
-  apiKey: process.env.GEMINI_API_KEY
-});
+// Initialize Vertex AI client (server-side, uses service account)
+const gemini = vertexAI;
 
 // A robust utility to find and parse a JSON object from a string that might contain markdown fences or other text.
 function robustJsonParse(str: string): any {

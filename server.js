@@ -4,13 +4,17 @@
  * This server:
  * 1. Serves the built Vite React app (static files from /dist)
  * 2. Handles /api/tts endpoint (Cloud Text-to-Speech)
- * 3. Runs on port 8080 (Cloud Run standard)
+ * 3. Handles /api/generate endpoint (Vertex AI Gemini)
+ * 4. Runs on port 8080 (Cloud Run standard)
+ *
+ * Uses ONE service account for both TTS and Gemini (GCP_SERVICE_ACCOUNT_JSON)
  */
 
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { TextToSpeechClient } from '@google-cloud/text-to-speech';
+import { GoogleGenAI } from '@google/genai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -23,9 +27,12 @@ app.use(express.json({ limit: '10mb' }));
 
 // Initialize Cloud TTS client
 let ttsClient = null;
+let vertexAIClient = null;
+let gcpCredentials = null;
+let gcpProjectId = null;
 
-const getClient = () => {
-  if (!ttsClient) {
+const initializeGCPCredentials = () => {
+  if (!gcpCredentials) {
     const serviceAccountJson = process.env.GCP_SERVICE_ACCOUNT_JSON;
 
     if (!serviceAccountJson) {
@@ -33,24 +40,84 @@ const getClient = () => {
     }
 
     try {
-      const credentials = JSON.parse(serviceAccountJson);
-      const projectId = process.env.GCP_PROJECT_ID || credentials.project_id;
-
-      ttsClient = new TextToSpeechClient({
-        projectId,
-        credentials,
-      });
-
-      console.log(`✅ Cloud TTS client initialized for project: ${projectId}`);
+      gcpCredentials = JSON.parse(serviceAccountJson);
+      gcpProjectId = process.env.GCP_PROJECT_ID || gcpCredentials.project_id;
+      console.log(`✅ GCP credentials loaded for project: ${gcpProjectId}`);
     } catch (error) {
-      console.error('❌ Failed to initialize Cloud TTS client:', error);
+      console.error('❌ Failed to parse GCP credentials:', error);
       throw new Error('Invalid GCP credentials JSON format');
     }
+  }
+  return { credentials: gcpCredentials, projectId: gcpProjectId };
+};
+
+const getTTSClient = () => {
+  if (!ttsClient) {
+    const { credentials, projectId } = initializeGCPCredentials();
+    ttsClient = new TextToSpeechClient({
+      projectId,
+      credentials,
+    });
+    console.log(`✅ Cloud TTS client initialized`);
   }
   return ttsClient;
 };
 
+const getVertexAIClient = () => {
+  if (!vertexAIClient) {
+    const { credentials, projectId } = initializeGCPCredentials();
+
+    // Set service account credentials in environment for @google/genai
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON = JSON.stringify(credentials);
+
+    vertexAIClient = new GoogleGenAI({
+      vertexai: true,
+      project: projectId,
+      location: 'us-central1',
+    });
+    console.log(`✅ Vertex AI client initialized for project: ${projectId}`);
+  }
+  return vertexAIClient;
+};
+
 // API Routes
+
+// Vertex AI Gemini endpoint
+app.post('/api/generate', async (req, res) => {
+  try {
+    const { model, contents, config } = req.body;
+
+    if (!model || !contents) {
+      return res.status(400).json({ error: 'model and contents are required' });
+    }
+
+    console.log(`🤖 Vertex AI request: model=${model}`);
+
+    const client = getVertexAIClient();
+
+    const response = await client.models.generateContent({
+      model,
+      contents,
+      config,
+    });
+
+    console.log(`✅ Vertex AI response received`);
+
+    return res.status(200).json({
+      text: response.text,
+      candidates: response.candidates,
+    });
+
+  } catch (error) {
+    console.error('❌ Vertex AI Error:', error);
+    return res.status(500).json({
+      error: 'Failed to generate content',
+      details: error.message
+    });
+  }
+});
+
+// Cloud TTS endpoint
 app.post('/api/tts', async (req, res) => {
   try {
     const { text } = req.body;
@@ -61,7 +128,7 @@ app.post('/api/tts', async (req, res) => {
 
     console.log(`🎤 TTS request: "${text.substring(0, 50)}..." (${text.length} chars)`);
 
-    const client = getClient();
+    const client = getTTSClient();
 
     const request = {
       input: { text },
@@ -117,5 +184,7 @@ app.get('*', (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📦 Serving static files from: ${path.join(__dirname, 'dist')}`);
-  console.log(`🔊 TTS API available at: POST /api/tts`);
+  console.log(`🤖 Vertex AI Gemini available at: POST /api/generate`);
+  console.log(`🔊 Cloud TTS available at: POST /api/tts`);
+  console.log(`✅ Using unified service account for all Google Cloud APIs`);
 });
