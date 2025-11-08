@@ -178,7 +178,7 @@ app.post('/api/tts', async (req, res) => {
       input: { text },
       voice: {
         languageCode: 'en-US',
-        name: 'en-US-Chirp3-HD-Kore', // Chirp 3 HD - Ultra-natural female voice
+        name: 'en-US-Chirp3-HD-Sulafat', // Chirp 3 HD - Energetic and emotional female voice
       },
       audioConfig: {
         audioEncoding: 'LINEAR16',
