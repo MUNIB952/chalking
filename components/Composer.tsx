@@ -47,9 +47,11 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
     if (currentIndex >= PROMPTS.length) {
       setIsTransitionEnabled(false);
       setCurrentIndex(0);
-      // Use requestAnimationFrame to ensure the non-transitioned state is rendered
+      // Use double requestAnimationFrame to ensure the browser paints the reset state
       requestAnimationFrame(() => {
-        setIsTransitionEnabled(true);
+        requestAnimationFrame(() => {
+          setIsTransitionEnabled(true);
+        });
       });
     }
   };
@@ -113,8 +115,11 @@ const AnimatedStatusMessages: React.FC = () => {
     if (currentIndex >= STATUS_MESSAGES.length) {
       setIsTransitionEnabled(false);
       setCurrentIndex(0);
+      // Use double requestAnimationFrame to ensure the browser paints the reset state
       requestAnimationFrame(() => {
-        setIsTransitionEnabled(true);
+        requestAnimationFrame(() => {
+          setIsTransitionEnabled(true);
+        });
       });
     }
   };
@@ -191,11 +196,17 @@ export const Composer: React.FC<ComposerProps> = ({
     }
   };
 
-  // Clear input when status changes back to IDLE/DONE/ERROR (after generation completes)
+  // Restore submitted value to input when generation completes so user can edit and re-search
   useEffect(() => {
-    if (status === 'DONE' || status === 'ERROR') {
-      setInputValue('');
-      setSubmittedValue('');
+    if ((status === 'DONE' || status === 'ERROR') && submittedValue) {
+      setInputValue(submittedValue);
+    }
+  }, [status, submittedValue]);
+
+  // Auto-collapse composer when explanation/drawing starts for better viewing experience
+  useEffect(() => {
+    if (status === 'DRAWING') {
+      setIsExpanded(false);
     }
   }, [status]);
 
