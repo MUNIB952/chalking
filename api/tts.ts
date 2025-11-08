@@ -81,7 +81,7 @@ export default async function handler(
       input: { text: text },
       voice: {
         languageCode: 'en-US',
-        name: 'en-US-Chirp3-HD-Kore', // Chirp 3 HD - Ultra-natural female voice with emotional inflections
+        name: 'en-US-Chirp3-HD-Sulafat', // Chirp 3 HD - Energetic and emotional female voice
       },
       audioConfig: {
         audioEncoding: 'LINEAR16',

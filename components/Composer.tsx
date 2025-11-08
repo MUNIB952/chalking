@@ -297,7 +297,7 @@ export const Composer: React.FC<ComposerProps> = ({
                 placeholder="Or type your own idea..."
                 disabled={isInputDisabled}
                 className={`flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-4 py-2 border-none focus:outline-none focus:ring-0 custom-caret ${
-                  isInputDisabled && inputValue ? 'disabled:opacity-100 animate-shiver' : 'disabled:opacity-50'
+                  isInputDisabled && inputValue ? 'disabled:opacity-100 animate-shimmer' : 'disabled:opacity-50'
                 }`}
               />
               <button
