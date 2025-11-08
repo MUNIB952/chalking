@@ -117,6 +117,50 @@ app.post('/api/generate', async (req, res) => {
   }
 });
 
+// Vertex AI Gemini STREAMING endpoint
+app.post('/api/generate-stream', async (req, res) => {
+  try {
+    const { model, contents, config } = req.body;
+
+    if (!model || !contents) {
+      return res.status(400).json({ error: 'model and contents are required' });
+    }
+
+    console.log(`🌊 Vertex AI STREAMING request: model=${model}`);
+
+    const client = getVertexAIClient();
+
+    // Set headers for Server-Sent Events
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const stream = await client.models.generateContentStream({
+      model,
+      contents,
+      config,
+    });
+
+    // Stream chunks to client
+    for await (const chunk of stream) {
+      const chunkText = chunk.text || '';
+      // Send as Server-Sent Event
+      res.write(`data: ${JSON.stringify({ text: chunkText })}\n\n`);
+    }
+
+    // Signal end of stream
+    res.write('data: [DONE]\n\n');
+    res.end();
+
+    console.log(`✅ Vertex AI streaming complete`);
+
+  } catch (error) {
+    console.error('❌ Vertex AI Streaming Error:', error);
+    res.write(`data: ${JSON.stringify({ error: error.message })}\n\n`);
+    res.end();
+  }
+});
+
 // Cloud TTS endpoint
 app.post('/api/tts', async (req, res) => {
   try {
