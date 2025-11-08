@@ -520,7 +520,8 @@ const App: React.FC = () => {
         return;
       }
 
-      const sampleRate = audioContextRef.current.sampleRate;
+      // Use the actual sample rate from the TTS audio (24000 Hz), not the AudioContext's sample rate
+      const sampleRate = audioBuffersRef.current[0]?.sampleRate || 24000;
       const breathingTimeSamples = Math.floor(0.375 * sampleRate); // 375ms breathing time
 
       // Calculate total length
