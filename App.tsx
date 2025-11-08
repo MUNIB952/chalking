@@ -4,6 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { InteractionLayer } from './components/InteractionLayer';
 import { Composer } from './components/Composer';
+import { AnimatedLogo } from './components/AnimatedLogo';
 import { getInitialPlanStreaming, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { FocusIcon, DownloadIcon } from './components/icons';
@@ -653,16 +654,7 @@ const App: React.FC = () => {
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 flex justify-between items-center z-10 pointer-events-none">
             <div className="pointer-events-auto">
-                <h1
-                  className="text-[1.75rem] sm:text-3xl font-bold tracking-tight"
-                  style={{
-                    color: '#1F51FF',
-                    fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
-                    textShadow: '0 0 20px rgba(31, 81, 255, 0.3)'
-                  }}
-                >
-                  DodgySoft
-                </h1>
+                <AnimatedLogo />
             </div>
             <div className="pointer-events-auto flex items-center gap-2">
                 {/* Research Preview Badge */}
