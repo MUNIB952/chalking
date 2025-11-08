@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { InteractionLayer } from './components/InteractionLayer';
 import { Composer } from './components/Composer';
-import { getInitialPlanStreaming, generateSpeech } from './services/aiService';
+import { getInitialPlan, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { FocusIcon, DownloadIcon } from './components/icons';
 import { RateLimiter } from './utils/rateLimiter';
@@ -91,7 +91,6 @@ const App: React.FC = () => {
   const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(1000)); // Cloud TTS: 1000 calls per minute
   const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
   const fullResponseRef = useRef<AIResponse | null>(null); // Store full response for download
-  const step0AudioStartedRef = useRef<boolean>(false); // Track if step 0 audio started during streaming
 
   const [animationProgress, setAnimationProgress] = useState(0);
   const [audioReadySteps, setAudioReadySteps] = useState<Set<number>>(new Set()); // Track which steps have audio ready
@@ -218,24 +217,7 @@ const App: React.FC = () => {
         }
       };
 
-      // 🚀 STREAMING OPTIMIZATION: Start audio generation as soon as step 0 explanation arrives
-      step0AudioStartedRef.current = false; // Reset for new request
-
-      const response: AIResponse = await getInitialPlanStreaming(prompt, (step0Explanation) => {
-        // This callback fires AS SOON as step 0 explanation is detected in the stream
-        if (!step0AudioStartedRef.current) {
-          console.log('⚡ SPEED BOOST: Step 0 audio generation starting BEFORE JSON completes!');
-          step0AudioStartedRef.current = true;
-
-          // Initialize audio array (we don't know length yet, but we know step 0 exists)
-          if (audioBuffersRef.current.length === 0) {
-            audioBuffersRef.current = [null]; // Will expand later
-          }
-
-          // Start generating step 0 audio immediately!
-          generateStepAudio(step0Explanation, 0);
-        }
-      });
+      const response: AIResponse = await getInitialPlan(prompt);
 
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
@@ -247,15 +229,7 @@ const App: React.FC = () => {
 
       // PROGRESSIVE EXECUTION: Start showing content immediately
       // Initialize state for progressive playback
-      const existingStep0Buffer = audioBuffersRef.current[0]; // Preserve step 0 audio if already generated
       audioBuffersRef.current = new Array(response.whiteboard.length).fill(null);
-
-      // Restore step 0 buffer if it was generated during streaming
-      if (step0AudioStartedRef.current && existingStep0Buffer) {
-        audioBuffersRef.current[0] = existingStep0Buffer;
-        console.log('✅ Step 0 audio was generated during streaming!');
-      }
-
       setAudioReadySteps(new Set());
       audioGenerationInProgressRef.current.clear();
       (window as any).stepDurations = new Array(response.whiteboard.length).fill(3.0);
@@ -265,13 +239,12 @@ const App: React.FC = () => {
       setWhiteboardSteps(response.whiteboard);
       fullResponseRef.current = response; // Store full response for download
 
-      console.log(`🚀 JSON complete! Generating audio for ${response.whiteboard.length} steps...`);
+      // Start generating audio with Cloud TTS (1000 calls/minute - no batching needed!)
+      console.log(`🚀 Generating audio for all ${response.whiteboard.length} steps simultaneously...`);
       console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute (Cloud TTS)`);
 
-      // If step 0 wasn't generated during streaming (fallback), generate it now
-      if (!step0AudioStartedRef.current) {
-        await generateStepAudio(response.whiteboard[0].explanation, 0);
-      }
+      // Generate audio for first step IMMEDIATELY (high priority)
+      await generateStepAudio(response.whiteboard[0].explanation, 0);
 
       // Clear preparing messages
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
