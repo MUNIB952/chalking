@@ -16,7 +16,7 @@ export const AnimatedLogo: React.FC = () => {
       className="text-[1.75rem] sm:text-3xl font-bold tracking-tight relative"
       style={{
         color: '#1F51FF',
-        fontFamily: 'Inter, system-ui, -apple-system, sans-serif',
+        fontFamily: "'Montserrat', sans-serif",
         textShadow: '0 0 20px rgba(31, 81, 255, 0.3)',
       }}
     >
