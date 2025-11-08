@@ -9,41 +9,40 @@ const iconProps = {
   strokeWidth: 1.5,
   strokeLinecap: "round" as "round",
   strokeLinejoin: "round" as "round",
-  className:"w-6 h-6"
 };
 
 // Speaker with sound waves
-export const UnmuteIcon = () => (
-  <svg {...iconProps}><path d="M11 5L6 9H2v6h4l5 4V5zM17 12a5 5 0 00-5-5m0 10a5 5 0 005-5"/></svg>
+export const UnmuteIcon = ({ className }: { className?: string }) => (
+  <svg {...iconProps} className={className || "w-6 h-6"}><path d="M11 5L6 9H2v6h4l5 4V5zM17 12a5 5 0 00-5-5m0 10a5 5 0 005-5"/></svg>
 );
 
 // Speaker without sound waves
-export const MuteIcon = () => (
-    <svg {...iconProps}><path d="M11 5L6 9H2v6h4l5 4V5z"/></svg>
+export const MuteIcon = ({ className }: { className?: string }) => (
+    <svg {...iconProps} className={className || "w-6 h-6"}><path d="M11 5L6 9H2v6h4l5 4V5z"/></svg>
 );
 
-export const RepeatIcon = () => (
-  <svg {...iconProps}><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
+export const RepeatIcon = ({ className }: { className?: string }) => (
+  <svg {...iconProps} className={className || "w-6 h-6"}><path d="M17 1l4 4-4 4M3 11V9a4 4 0 014-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 01-4 4H3"/></svg>
 );
 
-export const PauseIcon = () => (
-  <svg {...iconProps}><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+export const PauseIcon = ({ className }: { className?: string }) => (
+  <svg {...iconProps} className={className || "w-6 h-6"}><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
 );
 
-export const PlayIcon = () => (
-    <svg {...iconProps}><path d="M5 3l14 9-14 9V3z"/></svg>
+export const PlayIcon = ({ className }: { className?: string }) => (
+    <svg {...iconProps} className={className || "w-6 h-6"}><path d="M5 3l14 9-14 9V3z"/></svg>
 );
 
-export const ExpandIcon = () => (
-  <svg {...iconProps}><path d="M6 9l6 6 6-6"/></svg>
+export const ExpandIcon = ({ className }: { className?: string }) => (
+  <svg {...iconProps} className={className || "w-6 h-6"}><path d="M6 9l6 6 6-6"/></svg>
 );
 
-export const CollapseIcon = () => (
-    <svg {...iconProps}><path d="M18 15l-6-6-6 6"/></svg>
+export const CollapseIcon = ({ className }: { className?: string }) => (
+    <svg {...iconProps} className={className || "w-6 h-6"}><path d="M18 15l-6-6-6 6"/></svg>
 );
 
 export const SendIcon = ({ className }: { className?: string }) => (
-  <svg {...iconProps} strokeWidth={2} className={`w-5 h-5 ${className ?? ''}`}><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+  <svg {...iconProps} strokeWidth={2} className={className || "w-5 h-5"}><path d="M12 19V5M5 12l7-7 7 7"/></svg>
 );
 
 export const FocusIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
