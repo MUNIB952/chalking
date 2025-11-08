@@ -85,6 +85,62 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
   );
 };
 
+// --- AnimatedStatusMessages component ---
+const STATUS_MESSAGES = [
+  'Thinking...',
+  'Drawing...',
+  'Generating audio...',
+  'Finding the best way...',
+  'Planning the visualization...',
+  'Crafting the explanation...',
+];
+
+const AnimatedStatusMessages: React.FC = () => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isTransitionEnabled, setIsTransitionEnabled] = useState(true);
+
+  const messagesWithLoop = useMemo(() => [...STATUS_MESSAGES, STATUS_MESSAGES[0]], []);
+  const itemHeight = 32;
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentIndex(prev => prev + 1);
+    }, 2500);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const onTransitionEnd = () => {
+    if (currentIndex >= STATUS_MESSAGES.length) {
+      setIsTransitionEnabled(false);
+      setCurrentIndex(0);
+      requestAnimationFrame(() => {
+        setIsTransitionEnabled(true);
+      });
+    }
+  };
+
+  return (
+    <div className="relative h-8 overflow-hidden" aria-live="polite" aria-atomic="true">
+      <div
+        className="absolute w-full"
+        style={{
+          transform: `translateY(-${currentIndex * itemHeight}px)`,
+          transition: isTransitionEnabled ? 'transform 0.5s ease-in-out' : 'none',
+        }}
+        onTransitionEnd={onTransitionEnd}
+      >
+        {messagesWithLoop.map((message, index) => (
+          <div key={`${message}-${index}`} className="h-8 flex items-center">
+            <span className="text-left text-lg text-neutral-400 whitespace-nowrap">
+              {message}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const Composer: React.FC<ComposerProps> = ({
   status,
   explanation,
@@ -100,12 +156,14 @@ export const Composer: React.FC<ComposerProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [inputValue, setInputValue] = useState('');
+  const [submittedValue, setSubmittedValue] = useState(''); // Track the last submitted value
   const inputRef = useRef<HTMLInputElement>(null);
 
   const isInputDisabled = status === 'THINKING' || status === 'PREPARING';
   const showIdleState = status === 'IDLE' || status === 'DONE' || status === 'ERROR';
   const showProgress = status === 'DRAWING' || status === 'DONE';
   const showTranscript = status === 'DRAWING';
+  const showStatusMessages = status === 'THINKING' || status === 'PREPARING';
 
   const currentStepName = steps[currentStepIndex]?.stepName || '';
 
@@ -118,18 +176,28 @@ export const Composer: React.FC<ComposerProps> = ({
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!isInputDisabled && inputValue.trim()) {
+        setSubmittedValue(inputValue); // Save submitted value
         onSubmit(inputValue);
-        setInputValue(''); // Clear input after submission
+        // DON'T clear input - keep it visible
       }
     }
   };
 
   const handleSubmit = () => {
     if (!isInputDisabled && inputValue.trim()) {
+      setSubmittedValue(inputValue); // Save submitted value
       onSubmit(inputValue);
-      setInputValue(''); // Clear input after submission
+      // DON'T clear input - keep it visible
     }
   };
+
+  // Clear input when status changes back to IDLE/DONE/ERROR (after generation completes)
+  useEffect(() => {
+    if (status === 'DONE' || status === 'ERROR') {
+      setInputValue('');
+      setSubmittedValue('');
+    }
+  }, [status]);
 
   const progressPercentage = steps.length > 0 ? (status === 'DONE' ? 100 : ((currentStepIndex + 1) / steps.length) * 100) : 0;
 
@@ -139,11 +207,13 @@ export const Composer: React.FC<ComposerProps> = ({
     >
       <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
-        {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts (LEFT) + Control Buttons (RIGHT) */}
+        {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts/Status (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between h-12">
           <div className="flex-1 mr-2 pl-1 min-w-0">
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
+            ) : showStatusMessages ? (
+              <AnimatedStatusMessages />
             ) : showProgress ? (
               <div className="flex flex-col justify-center h-10 space-y-1">
                 {/* Step Name */}
@@ -226,7 +296,9 @@ export const Composer: React.FC<ComposerProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Or type your own idea..."
                 disabled={isInputDisabled}
-                className="flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-4 py-2 border-none focus:outline-none focus:ring-0 disabled:opacity-50 custom-caret"
+                className={`flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-4 py-2 border-none focus:outline-none focus:ring-0 custom-caret ${
+                  isInputDisabled && inputValue ? 'disabled:opacity-100 animate-shiver' : 'disabled:opacity-50'
+                }`}
               />
               <button
                 onClick={handleSubmit}

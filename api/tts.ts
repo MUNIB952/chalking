@@ -81,7 +81,7 @@ export default async function handler(
       input: { text: text },
       voice: {
         languageCode: 'en-US',
-        name: 'en-US-Wavenet-C', // Expressive female voice (WaveNet - more emotional than Neural2)
+        name: 'en-US-Chirp3-HD-Kore', // Chirp 3 HD - Ultra-natural female voice with emotional inflections
       },
       audioConfig: {
         audioEncoding: 'LINEAR16',
