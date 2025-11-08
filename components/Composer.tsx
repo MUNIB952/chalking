@@ -76,7 +76,7 @@ const AnimatedPrompts: React.FC<AnimatedPromptsProps> = ({ onPromptClick, isPlay
           <div key={`${prompt}-${index}`} className="h-8 flex items-center">
             <button
               onClick={() => onPromptClick(prompt)}
-              className="text-left text-lg transition-colors text-neutral-400 hover:text-neutral-200 whitespace-nowrap"
+              className="text-left text-sm md:text-lg transition-colors text-neutral-400 hover:text-neutral-200 whitespace-nowrap overflow-hidden text-ellipsis max-w-full"
             >
               {prompt}
             </button>
@@ -136,7 +136,7 @@ const AnimatedStatusMessages: React.FC = () => {
       >
         {messagesWithLoop.map((message, index) => (
           <div key={`${message}-${index}`} className="h-8 flex items-center">
-            <span className="text-left text-lg text-neutral-400 whitespace-nowrap">
+            <span className="text-left text-sm md:text-lg text-neutral-400 whitespace-nowrap overflow-hidden text-ellipsis max-w-full">
               {message}
             </span>
           </div>
@@ -214,13 +214,13 @@ export const Composer: React.FC<ComposerProps> = ({
 
   return (
     <div
-      className="absolute bottom-4 left-4 right-4 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-full max-w-4xl md:w-auto md:min-w-[700px] z-50"
+      className="absolute bottom-2 left-2 right-2 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto max-w-full md:max-w-4xl md:min-w-[700px] z-50"
     >
       <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts/Status (LEFT) + Control Buttons (RIGHT) */}
-        <div className="flex items-center justify-between h-12">
-          <div className="flex-1 mr-2 pl-1 min-w-0">
+        <div className="flex items-center justify-between min-h-[3rem] md:h-12">
+          <div className="flex-1 mr-1 md:mr-2 pl-1 min-w-0 overflow-hidden">
             {showIdleState ? (
               <AnimatedPrompts onPromptClick={handlePromptClick} isPlaying={true} />
             ) : showStatusMessages ? (
@@ -252,29 +252,39 @@ export const Composer: React.FC<ComposerProps> = ({
 
           {/* Control Buttons - RIGHT */}
           <div className="flex-shrink-0 flex items-center gap-1 mr-1">
+            {/* Mute Button - Hidden on mobile when IDLE */}
             <button
               onClick={onToggleMute}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+              className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all ${
+                showIdleState ? 'hidden md:flex' : 'flex'
+              }`}
             >
-              {isMuted ? <MuteIcon className="w-5 h-5" /> : <UnmuteIcon className="w-5 h-5" />}
+              {isMuted ? <MuteIcon className="w-4 h-4 md:w-5 md:h-5" /> : <UnmuteIcon className="w-4 h-4 md:w-5 md:h-5" />}
             </button>
+            {/* Repeat Button - Hidden on mobile when IDLE */}
             <button
               onClick={onRepeat}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+              className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all ${
+                showIdleState ? 'hidden md:flex' : 'flex'
+              }`}
             >
-              <RepeatIcon className="w-5 h-5" />
+              <RepeatIcon className="w-4 h-4 md:w-5 md:h-5" />
             </button>
+            {/* Play/Pause Button - Hidden on mobile when IDLE */}
             <button
               onClick={onTogglePause}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+              className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all ${
+                showIdleState ? 'hidden md:flex' : 'flex'
+              }`}
             >
-              {isPaused ? <PlayIcon className="w-5 h-5" /> : <PauseIcon className="w-5 h-5" />}
+              {isPaused ? <PlayIcon className="w-4 h-4 md:w-5 md:h-5" /> : <PauseIcon className="w-4 h-4 md:w-5 md:h-5" />}
             </button>
+            {/* Expand/Collapse Button - Always visible */}
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="w-12 h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
+              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-black text-neutral-400 border border-neutral-800 hover:text-white hover:border-neutral-600 transition-all"
             >
-              {isExpanded ? <CollapseIcon className="w-5 h-5" /> : <ExpandIcon className="w-5 h-5" />}
+              {isExpanded ? <CollapseIcon className="w-4 h-4 md:w-5 md:h-5" /> : <ExpandIcon className="w-4 h-4 md:w-5 md:h-5" />}
             </button>
           </div>
         </div>
@@ -307,17 +317,17 @@ export const Composer: React.FC<ComposerProps> = ({
                 onKeyDown={handleKeyDown}
                 placeholder="Or type your own idea..."
                 disabled={isInputDisabled}
-                className={`flex-grow bg-transparent text-white placeholder-neutral-500 text-lg px-4 py-2 border-none focus:outline-none focus:ring-0 custom-caret ${
+                className={`flex-grow bg-transparent text-white placeholder-neutral-500 text-sm md:text-lg px-3 md:px-4 py-2 border-none focus:outline-none focus:ring-0 custom-caret ${
                   isInputDisabled && inputValue ? 'disabled:opacity-100 animate-shimmer' : 'disabled:opacity-50'
                 }`}
               />
               <button
                 onClick={handleSubmit}
                 disabled={isInputDisabled || !inputValue.trim()}
-                className="w-12 h-12 flex items-center justify-center bg-[#1F51FF] text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:bg-blue-800 disabled:cursor-not-allowed"
+                className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-[#1F51FF] text-white rounded-full transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:bg-blue-800 disabled:cursor-not-allowed flex-shrink-0"
                 aria-label="Send prompt"
               >
-                <SendIcon />
+                <SendIcon className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
           </div>
