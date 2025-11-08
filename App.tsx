@@ -4,7 +4,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { Canvas } from './components/Canvas';
 import { InteractionLayer } from './components/InteractionLayer';
 import { Composer } from './components/Composer';
-import { getInitialPlan, generateSpeech } from './services/aiService';
+import { getInitialPlanStreaming, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
 import { FocusIcon, DownloadIcon } from './components/icons';
 import { RateLimiter } from './utils/rateLimiter';
@@ -91,6 +91,7 @@ const App: React.FC = () => {
   const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(1000)); // Cloud TTS: 1000 calls per minute
   const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
   const fullResponseRef = useRef<AIResponse | null>(null); // Store full response for download
+  const step0AudioStartedRef = useRef<boolean>(false); // Track if step 0 audio started during streaming
 
   const [animationProgress, setAnimationProgress] = useState(0);
   const [audioReadySteps, setAudioReadySteps] = useState<Set<number>>(new Set()); // Track which steps have audio ready
@@ -170,34 +171,8 @@ const App: React.FC = () => {
     }, 2500);
 
     try {
-      const response: AIResponse = await getInitialPlan(prompt);
-
-      if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
-
-      if (!response.whiteboard || response.whiteboard.length === 0) {
-        setExplanation(response.explanation || "I couldn't create a visual for that, but here's an explanation.");
-        setStatus('DONE');
-        return;
-      }
-
-      // PROGRESSIVE EXECUTION: Start showing content immediately
-      // Initialize state for progressive playback
-      audioBuffersRef.current = new Array(response.whiteboard.length).fill(null);
-      setAudioReadySteps(new Set());
-      audioGenerationInProgressRef.current.clear();
-      (window as any).stepDurations = new Array(response.whiteboard.length).fill(3.0);
-
-      // Set steps immediately so UI can prepare
-      overallExplanationRef.current = response.explanation;
-      setWhiteboardSteps(response.whiteboard);
-      fullResponseRef.current = response; // Store full response for download
-
-      // Start generating audio with Cloud TTS (1000 calls/minute - no batching needed!)
-      console.log(`🚀 Generating audio for all ${response.whiteboard.length} steps simultaneously...`);
-      console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute (Cloud TTS)`);
-
       // Helper function to generate and process audio for a single step
-      const generateStepAudio = async (step: WhiteboardStep, index: number) => {
+      const generateStepAudio = async (stepExplanation: string, index: number) => {
         if (audioGenerationInProgressRef.current.has(index)) {
           return; // Already generating
         }
@@ -208,7 +183,7 @@ const App: React.FC = () => {
         try {
           // Use rate limiter - with Cloud TTS (1000/min), all steps complete in seconds
           const audio = await rateLimiterRef.current.execute(() =>
-            generateSpeech(step.explanation)
+            generateSpeech(stepExplanation)
           );
 
           if (audio && audioWorkerRef.current) {
@@ -243,13 +218,65 @@ const App: React.FC = () => {
         }
       };
 
-      // Generate audio for first step IMMEDIATELY (high priority)
-      await generateStepAudio(response.whiteboard[0], 0);
+      // 🚀 STREAMING OPTIMIZATION: Start audio generation as soon as step 0 explanation arrives
+      step0AudioStartedRef.current = false; // Reset for new request
+
+      const response: AIResponse = await getInitialPlanStreaming(prompt, (step0Explanation) => {
+        // This callback fires AS SOON as step 0 explanation is detected in the stream
+        if (!step0AudioStartedRef.current) {
+          console.log('⚡ SPEED BOOST: Step 0 audio generation starting BEFORE JSON completes!');
+          step0AudioStartedRef.current = true;
+
+          // Initialize audio array (we don't know length yet, but we know step 0 exists)
+          if (audioBuffersRef.current.length === 0) {
+            audioBuffersRef.current = [null]; // Will expand later
+          }
+
+          // Start generating step 0 audio immediately!
+          generateStepAudio(step0Explanation, 0);
+        }
+      });
+
+      if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
+
+      if (!response.whiteboard || response.whiteboard.length === 0) {
+        setExplanation(response.explanation || "I couldn't create a visual for that, but here's an explanation.");
+        setStatus('DONE');
+        return;
+      }
+
+      // PROGRESSIVE EXECUTION: Start showing content immediately
+      // Initialize state for progressive playback
+      const existingStep0Buffer = audioBuffersRef.current[0]; // Preserve step 0 audio if already generated
+      audioBuffersRef.current = new Array(response.whiteboard.length).fill(null);
+
+      // Restore step 0 buffer if it was generated during streaming
+      if (step0AudioStartedRef.current && existingStep0Buffer) {
+        audioBuffersRef.current[0] = existingStep0Buffer;
+        console.log('✅ Step 0 audio was generated during streaming!');
+      }
+
+      setAudioReadySteps(new Set());
+      audioGenerationInProgressRef.current.clear();
+      (window as any).stepDurations = new Array(response.whiteboard.length).fill(3.0);
+
+      // Set steps immediately so UI can prepare
+      overallExplanationRef.current = response.explanation;
+      setWhiteboardSteps(response.whiteboard);
+      fullResponseRef.current = response; // Store full response for download
+
+      console.log(`🚀 JSON complete! Generating audio for ${response.whiteboard.length} steps...`);
+      console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute (Cloud TTS)`);
+
+      // If step 0 wasn't generated during streaming (fallback), generate it now
+      if (!step0AudioStartedRef.current) {
+        await generateStepAudio(response.whiteboard[0].explanation, 0);
+      }
 
       // Clear preparing messages
       if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
 
-      // Start playing! First step audio is ready
+      // Start playing! First step audio is ready (or will be very soon)
       setExplanation(response.explanation);
       setStatus('DRAWING');
 
@@ -260,9 +287,9 @@ const App: React.FC = () => {
 
         console.log(`🎤 Queueing all remaining ${totalSteps - 1} steps for immediate generation...`);
 
-        // Generate all remaining steps in parallel (step 0 already done)
+        // Generate all remaining steps in parallel (step 0 already done or in progress)
         for (let i = 1; i < totalSteps; i++) {
-          generateStepAudio(response.whiteboard[i], i);
+          generateStepAudio(response.whiteboard[i].explanation, i);
         }
 
         console.log(`✅ All ${totalSteps} audio generation requests queued! (Cloud TTS rate: 1000/min)`);
