@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body {
+    font-family: 'Montserrat', sans-serif;
+  }
+}
+
 @keyframes shimmer {
   0% {
     background-position: -200% center;

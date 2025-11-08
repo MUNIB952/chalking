@@ -658,7 +658,7 @@ const App: React.FC = () => {
             </div>
             <div className="pointer-events-auto flex items-center gap-2">
                 {/* Research Preview Badge */}
-                <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl border border-neutral-800 rounded-lg px-3 py-1.5" style={{ fontFamily: 'Arial, sans-serif' }}>
+                <div className="flex items-center gap-2 bg-black/50 backdrop-blur-xl border border-neutral-800 rounded-lg px-3 py-1.5">
                     <span className="text-xs text-neutral-500">Research Preview</span>
                 </div>
 
