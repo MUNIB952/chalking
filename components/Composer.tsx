@@ -214,7 +214,7 @@ export const Composer: React.FC<ComposerProps> = ({
 
   return (
     <div
-      className="absolute bottom-16 left-2 right-2 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto max-w-full md:max-w-4xl md:min-w-[700px] z-50"
+      className="absolute composer-mobile-position left-2 right-2 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto max-w-full md:max-w-4xl md:min-w-[700px] z-50"
     >
       <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
