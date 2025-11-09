@@ -30,3 +30,16 @@
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* Professional mobile-responsive positioning with safe-area support */
+.composer-mobile-position {
+  /* Mobile: Use 8vh (8% of viewport height) + safe-area for iOS notches */
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 8vh);
+}
+
+/* Desktop: Override with fixed spacing at md breakpoint (768px+) */
+@media (min-width: 768px) {
+  .composer-mobile-position {
+    bottom: 1.5rem; /* 24px - equivalent to bottom-6 in Tailwind */
+  }
+}
