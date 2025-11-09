@@ -7,7 +7,7 @@ import { Composer } from './components/Composer';
 import { AnimatedLogo } from './components/AnimatedLogo';
 import { getInitialPlanStreaming, generateSpeech } from './services/aiService';
 import { AIResponse, AppStatus, WhiteboardStep } from './types';
-import { FocusIcon, DownloadIcon } from './components/icons';
+import { FocusIcon } from './components/icons';
 import { RateLimiter } from './utils/rateLimiter';
 
 // This is the code that will run in the background thread to avoid blocking the UI.
@@ -91,7 +91,6 @@ const App: React.FC = () => {
   const pausedAtRef = useRef<number>(0); // Timestamp when paused
   const rateLimiterRef = useRef<RateLimiter>(new RateLimiter(1000)); // Cloud TTS: 1000 calls per minute
   const audioGenerationInProgressRef = useRef<Set<number>>(new Set()); // Track which steps are being generated
-  const fullResponseRef = useRef<AIResponse | null>(null); // Store full response for download
   const step0AudioStartedRef = useRef<boolean>(false); // Track if step 0 audio started during streaming
 
   const [animationProgress, setAnimationProgress] = useState(0);
@@ -264,7 +263,6 @@ const App: React.FC = () => {
       // Set steps immediately so UI can prepare
       overallExplanationRef.current = response.explanation;
       setWhiteboardSteps(response.whiteboard);
-      fullResponseRef.current = response; // Store full response for download
 
       console.log(`🚀 JSON complete! Generating audio for ${response.whiteboard.length} steps...`);
       console.log(`Rate limit: ${rateLimiterRef.current.getRemainingCalls()} calls available this minute (Cloud TTS)`);
@@ -514,142 +512,6 @@ const App: React.FC = () => {
     setIsMuted(prev => !prev);
   }, []);
 
-  // Download functions
-  const downloadJSON = useCallback(() => {
-    if (!fullResponseRef.current) {
-      console.error('No response data to download');
-      return;
-    }
-
-    const jsonStr = JSON.stringify(fullResponseRef.current, null, 2);
-    const blob = new Blob([jsonStr], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `explanation-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    console.log('✅ JSON downloaded');
-  }, []);
-
-  const downloadCompiledAudio = useCallback(async () => {
-    if (!audioContextRef.current || audioBuffersRef.current.length === 0) {
-      console.error('No audio to download');
-      return;
-    }
-
-    try {
-      // Check if all audio buffers are ready
-      const allBuffersReady = audioBuffersRef.current.every(buffer => buffer !== null);
-      if (!allBuffersReady) {
-        console.warn('Not all audio buffers are ready yet');
-        return;
-      }
-
-      // Use the actual sample rate from the TTS audio (24000 Hz), not the AudioContext's sample rate
-      const sampleRate = audioBuffersRef.current[0]?.sampleRate || 24000;
-      const breathingTimeSamples = Math.floor(0.375 * sampleRate); // 375ms breathing time
-
-      // Calculate total length
-      let totalSamples = 0;
-      audioBuffersRef.current.forEach((buffer, index) => {
-        if (buffer) {
-          totalSamples += buffer.length;
-          // Add breathing time after each step except the last one
-          if (index < audioBuffersRef.current.length - 1) {
-            totalSamples += breathingTimeSamples;
-          }
-        }
-      });
-
-      // Create a new buffer to hold the compiled audio
-      const compiledBuffer = audioContextRef.current.createBuffer(
-        1, // mono
-        totalSamples,
-        sampleRate
-      );
-      const compiledData = compiledBuffer.getChannelData(0);
-
-      // Copy all audio buffers with breathing time
-      let offset = 0;
-      audioBuffersRef.current.forEach((buffer, index) => {
-        if (buffer) {
-          const sourceData = buffer.getChannelData(0);
-          compiledData.set(sourceData, offset);
-          offset += buffer.length;
-
-          // Add breathing time (silence) after each step except the last one
-          if (index < audioBuffersRef.current.length - 1) {
-            // Silence is already zeros, just advance the offset
-            offset += breathingTimeSamples;
-          }
-        }
-      });
-
-      // Convert to WAV format
-      const wavBuffer = audioBufferToWav(compiledBuffer);
-      const blob = new Blob([wavBuffer], { type: 'audio/wav' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `explanation-audio-${Date.now()}.wav`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      console.log('✅ Compiled audio downloaded');
-    } catch (error) {
-      console.error('Error compiling audio:', error);
-    }
-  }, []);
-
-  // Helper function to convert AudioBuffer to WAV
-  const audioBufferToWav = (buffer: AudioBuffer): ArrayBuffer => {
-    const length = buffer.length * buffer.numberOfChannels * 2;
-    const arrayBuffer = new ArrayBuffer(44 + length);
-    const view = new DataView(arrayBuffer);
-
-    // Write WAV header
-    const writeString = (offset: number, string: string) => {
-      for (let i = 0; i < string.length; i++) {
-        view.setUint8(offset + i, string.charCodeAt(i));
-      }
-    };
-
-    writeString(0, 'RIFF');
-    view.setUint32(4, 36 + length, true);
-    writeString(8, 'WAVE');
-    writeString(12, 'fmt ');
-    view.setUint32(16, 16, true); // fmt chunk size
-    view.setUint16(20, 1, true); // PCM format
-    view.setUint16(22, buffer.numberOfChannels, true);
-    view.setUint32(24, buffer.sampleRate, true);
-    view.setUint32(28, buffer.sampleRate * buffer.numberOfChannels * 2, true);
-    view.setUint16(32, buffer.numberOfChannels * 2, true);
-    view.setUint16(34, 16, true); // bits per sample
-    writeString(36, 'data');
-    view.setUint32(40, length, true);
-
-    // Write audio data
-    const channelData = buffer.getChannelData(0);
-    let offset = 44;
-    for (let i = 0; i < channelData.length; i++) {
-      const sample = Math.max(-1, Math.min(1, channelData[i]));
-      view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
-      offset += 2;
-    }
-
-    return arrayBuffer;
-  };
-
-  const handleDownload = useCallback(() => {
-    console.log('📥 Starting downloads...');
-    downloadJSON();
-    downloadCompiledAudio();
-  }, [downloadJSON, downloadCompiledAudio]);
-
   return (
     <div className="w-screen h-screen bg-black text-white font-sans flex items-center justify-center relative overflow-hidden">
         <div className="absolute top-0 left-0 right-0 p-2 sm:p-4 flex justify-between items-center z-10 pointer-events-none">
@@ -661,18 +523,6 @@ const App: React.FC = () => {
                 <div className="flex items-center gap-2 bg-black/30 backdrop-blur-xl border border-neutral-800/50 rounded-lg px-3 py-1.5 opacity-60">
                     <span className="text-xs text-neutral-500">Research Preview</span>
                 </div>
-
-                {/* Download Button */}
-                {status === 'DONE' && (
-                    <button
-                        onClick={handleDownload}
-                        className="p-2 w-10 h-10 flex items-center justify-center rounded-lg bg-black/50 backdrop-blur-xl border border-neutral-800 text-neutral-400 hover:text-white transition-all duration-200 transform hover:scale-110 active:scale-95"
-                        title="Download JSON and Audio"
-                        aria-label="Download JSON and Audio"
-                    >
-                        <DownloadIcon className="w-5 h-5" style={{ color: '#1F51FF' }} />
-                    </button>
-                )}
 
                 {/* Focus Button */}
                 {(status === 'DRAWING' || status === 'DONE') && (
