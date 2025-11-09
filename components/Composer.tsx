@@ -214,9 +214,9 @@ export const Composer: React.FC<ComposerProps> = ({
 
   return (
     <div
-      className="absolute bottom-4 left-2 right-2 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto max-w-full md:max-w-4xl md:min-w-[700px] z-50"
+      className="absolute bottom-16 left-2 right-2 md:bottom-6 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto max-w-full md:max-w-4xl md:min-w-[700px] z-50"
     >
-      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1 max-h-[85vh] md:max-h-none overflow-visible">
+      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
 
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts/Status (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between min-h-[3rem] md:h-12">
