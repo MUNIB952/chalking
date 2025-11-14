@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { PROMPTS } from '../constants';
 import { AppStatus, WhiteboardStep } from '../types';
 import {
-  ExpandIcon, CollapseIcon, RepeatIcon, MuteIcon, UnmuteIcon, SendIcon, PlayIcon, PauseIcon, DownloadIcon
+  ExpandIcon, CollapseIcon, RepeatIcon, MuteIcon, UnmuteIcon, SendIcon, PlayIcon, PauseIcon
 } from './icons';
 
 interface ComposerProps {
@@ -18,9 +18,6 @@ interface ComposerProps {
   onRepeat: () => void;
   onTogglePause: () => void;
   onToggleMute: () => void;
-  isRecording?: boolean;
-  hasRecordedVideo?: boolean;
-  onDownloadVideo?: () => void;
 }
 
 // --- AnimatedPrompts component ---
@@ -161,9 +158,6 @@ export const Composer: React.FC<ComposerProps> = ({
   onRepeat,
   onTogglePause,
   onToggleMute,
-  isRecording,
-  hasRecordedVideo,
-  onDownloadVideo,
 }) => {
   const [isExpanded, setIsExpanded] = useState(true);
   const [inputValue, setInputValue] = useState('');
@@ -285,23 +279,6 @@ export const Composer: React.FC<ComposerProps> = ({
             >
               {isPaused ? <PlayIcon className="w-4 h-4 md:w-5 md:h-5" /> : <PauseIcon className="w-4 h-4 md:w-5 md:h-5" />}
             </button>
-            {/* Download Video Button - Only shown when video is ready */}
-            {hasRecordedVideo && status === 'DONE' && (
-              <button
-                onClick={onDownloadVideo}
-                className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-cyan-500 text-white border-2 border-cyan-400 hover:bg-cyan-400 transition-all animate-pulse"
-                title="Download video"
-              >
-                <DownloadIcon className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-            )}
-            {/* Recording Indicator - Shows while recording */}
-            {isRecording && status === 'DRAWING' && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-full bg-red-500/20 border border-red-500">
-                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div>
-                <span className="text-xs text-red-400 font-medium">REC</span>
-              </div>
-            )}
             {/* Expand/Collapse Button - Always visible */}
             <button
               onClick={() => setIsExpanded(!isExpanded)}

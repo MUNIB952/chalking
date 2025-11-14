@@ -96,13 +96,6 @@ const App: React.FC = () => {
   const [animationProgress, setAnimationProgress] = useState(0);
   const [audioReadySteps, setAudioReadySteps] = useState<Set<number>>(new Set()); // Track which steps have audio ready
 
-  // --- Video Recording State ---
-  const [isRecording, setIsRecording] = useState<boolean>(false);
-  const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const recordedChunksRef = useRef<Blob[]>([]);
-  const canvasStreamRef = useRef<MediaStream | null>(null);
-
   const stopEverything = useCallback(() => {
     if (stepTimeoutRef.current) clearTimeout(stepTimeoutRef.current);
     if (statusMessageIntervalRef.current) clearInterval(statusMessageIntervalRef.current);
@@ -113,20 +106,12 @@ const App: React.FC = () => {
         audioSourceRef.current = null;
     }
 
-    // Stop video recording if active
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
-
     setIsPaused(false);
     playbackOffsetRef.current = 0;
     pausedProgressRef.current = 0; // Reset paused progress for fresh start
     setAnimationProgress(0);
     setAudioReadySteps(new Set()); // Clear audio ready tracking
     audioGenerationInProgressRef.current.clear(); // Clear generation tracking
-    setIsRecording(false);
-    setRecordedVideoUrl(null);
-    recordedChunksRef.current = [];
   }, []);
 
   useEffect(() => {
@@ -160,85 +145,6 @@ const App: React.FC = () => {
       audioContextRef.current?.close();
     };
   }, [stopEverything]);
-
-  // --- Video Recording Functions ---
-  const startRecording = useCallback(() => {
-    const canvas = document.querySelector('canvas');
-    if (!canvas || !gainNodeRef.current || !audioContextRef.current) {
-      console.error('Canvas or audio not ready for recording');
-      return;
-    }
-
-    try {
-      // Capture canvas stream at 60fps
-      const canvasStream = canvas.captureStream(60);
-      canvasStreamRef.current = canvasStream;
-
-      // Capture audio stream from gain node (includes all audio output)
-      const audioDestination = audioContextRef.current.createMediaStreamDestination();
-      gainNodeRef.current.connect(audioDestination);
-      const audioStream = audioDestination.stream;
-
-      // Combine canvas video + audio
-      const combinedStream = new MediaStream([
-        ...canvasStream.getVideoTracks(),
-        ...audioStream.getAudioTracks()
-      ]);
-
-      // Create MediaRecorder
-      const mimeType = MediaRecorder.isTypeSupported('video/webm; codecs=vp9')
-        ? 'video/webm; codecs=vp9'
-        : 'video/webm';
-
-      const recorder = new MediaRecorder(combinedStream, {
-        mimeType,
-        videoBitsPerSecond: 5000000 // 5 Mbps for good quality
-      });
-
-      recordedChunksRef.current = [];
-
-      recorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          recordedChunksRef.current.push(event.data);
-        }
-      };
-
-      recorder.onstop = () => {
-        const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
-        const url = URL.createObjectURL(blob);
-        setRecordedVideoUrl(url);
-        setIsRecording(false);
-        console.log('✅ Video recording complete!');
-      };
-
-      recorder.start();
-      mediaRecorderRef.current = recorder;
-      setIsRecording(true);
-      console.log('🎥 Started recording...');
-    } catch (error) {
-      console.error('Failed to start recording:', error);
-      setIsRecording(false);
-    }
-  }, []);
-
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      console.log('🛑 Stopping recording...');
-    }
-  }, []);
-
-  const downloadVideo = useCallback(() => {
-    if (!recordedVideoUrl) return;
-
-    const a = document.createElement('a');
-    a.href = recordedVideoUrl;
-    a.download = `explanation-${Date.now()}.webm`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    console.log('📥 Video download triggered');
-  }, [recordedVideoUrl]);
 
   const handleSubmit = useCallback(async (prompt: string) => {
     if (!prompt.trim() || status === 'THINKING' || status === 'PREPARING') {
@@ -373,9 +279,6 @@ const App: React.FC = () => {
       setExplanation(response.explanation);
       setStatus('DRAWING');
 
-      // Start video recording
-      startRecording();
-
       // With Cloud TTS (1000/min), generate ALL remaining steps immediately in parallel
       // No need for batching - all audio will be ready in seconds
       (async () => {
@@ -399,7 +302,7 @@ const App: React.FC = () => {
       setExplanation('Oops! Something went wrong. Please try again.');
       setStatus('ERROR');
     }
-  }, [status, stopEverything, startRecording]);
+  }, [status, stopEverything]);
 
   const handleRepeat = useCallback(() => {
     if (whiteboardSteps.length === 0) return;
@@ -470,10 +373,6 @@ const App: React.FC = () => {
       if (overallExplanationRef.current) {
         setExplanation(overallExplanationRef.current);
       }
-
-      // Stop video recording
-      stopRecording();
-
       return;
     }
 
@@ -600,7 +499,7 @@ const App: React.FC = () => {
         audioSourceRef.current = null;
       }
     };
-  }, [status, currentStepIndex, whiteboardSteps, isPaused, stopRecording]);
+  }, [status, currentStepIndex, whiteboardSteps, isPaused]);
 
   // Handle mute/unmute
   useEffect(() => {
@@ -662,9 +561,6 @@ const App: React.FC = () => {
             onRepeat={handleRepeat}
             onTogglePause={handleTogglePause}
             onToggleMute={handleToggleMute}
-            isRecording={isRecording}
-            hasRecordedVideo={!!recordedVideoUrl}
-            onDownloadVideo={downloadVideo}
         />
     </div>
   );
