@@ -618,15 +618,16 @@ export const Canvas: React.FC<CanvasProps> = ({
     // FIX 2: Dynamic framerate based on animation state (saves 60-70% when not animating)
     const getTargetFPS = () => {
       if (status === 'DRAWING' && !isPaused) return 60; // Smooth animation
-      if (status === 'DONE' || isPaused) return 15; // Low framerate when static
+      if (isPaused) return 0; // STOP completely when paused (saves 100% CPU)
+      if (status === 'DONE') return 5; // Very low framerate when done (in case of interactions)
       return 30; // Default
     };
 
     // FIX 1: Pause rendering when tab is hidden (saves 90% when hidden)
     const handleVisibilityChange = () => {
       isTabVisible = !document.hidden;
-      if (isTabVisible && frameId) {
-        // Resume rendering when tab becomes visible
+      if (isTabVisible && !isPaused) {
+        // Resume rendering when tab becomes visible (only if not paused)
         frameId = requestAnimationFrame(renderLoop);
       }
     };
@@ -640,6 +641,13 @@ export const Canvas: React.FC<CanvasProps> = ({
       }
 
       const targetFPS = getTargetFPS();
+
+      // If FPS is 0 (paused state), draw once and stop
+      if (targetFPS === 0) {
+        drawCanvas(timestamp);
+        return; // Stop the loop - will restart when isPaused changes (useEffect dependency)
+      }
+
       const frameInterval = 1000 / targetFPS;
       const elapsed = timestamp - lastFrameTime;
 
@@ -651,6 +659,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       frameId = requestAnimationFrame(renderLoop);
     };
 
+    // Start the render loop (will stop immediately if paused, restart when resumed)
     frameId = requestAnimationFrame(renderLoop);
 
     return () => {
