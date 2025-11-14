@@ -2,6 +2,7 @@
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { WhiteboardStep, Annotation, AppStatus, ArrowAnnotation, DrawingCommand, TextAnnotation, StrikethroughAnnotation, Point, AbsolutePoint, isRelativePoint, CircleCommand } from '../types';
 import { LoaderIcon, PauseIcon } from './icons';
+import gsap from 'gsap';
 
 interface CanvasProps {
   steps: WhiteboardStep[];
