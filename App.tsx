@@ -447,13 +447,18 @@ const App: React.FC = () => {
 
       console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s (actual audio duration), starting from ${(startProgress * 100).toFixed(1)}% progress`);
 
+      // PHASE 2: Speed up progressive drawing to 40% of audio duration
+      // This gives motion animations 60% of the time to play and be the star
+      const DRAWING_SPEED_MULTIPLIER = 0.4; // Drawing completes in 40% of audio time
+      const drawingDurationMs = durationMs * DRAWING_SPEED_MULTIPLIER;
+
       const stepStartTime = performance.now();
       const animate = () => {
         if (isCancelled) return;
 
         const elapsedMs = performance.now() - stepStartTime;
-        // Calculate progress from paused point
-        const progressDelta = Math.min(elapsedMs / durationMs, remainingProgress);
+        // Speed up drawing: complete in 40% of audio duration instead of 100%
+        const progressDelta = Math.min(elapsedMs / drawingDurationMs, remainingProgress);
         const currentProgress = Math.min(startProgress + progressDelta, 1);
 
         setAnimationProgress(currentProgress);
