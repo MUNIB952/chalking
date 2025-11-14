@@ -279,6 +279,161 @@ export const getInitialPlanStreaming = async (
 
       3.  **Filled Shapes Use Sparingly:** Filled shapes (\`isFilled: true\`) should be used ONLY for tiny marker dots or critical focal points. They appear instantly, so use them rarely.
 
+      **GSAP Motion Animation System (IMPORTANT - Bring Explanations to Life)**
+      You now have access to a powerful motion animation system powered by GSAP. This allows you to add movement, scaling, rotation, and other transformations to elements AFTER they finish drawing.
+
+      **When to Use Motion Animations:**
+      Use motion animations FREQUENTLY to create engaging, dynamic explanations. Motion should be used in most explanations to:
+      -   **Show Flow:** Animate arrows or objects moving along paths to demonstrate data flow, processes, or sequences
+      -   **Demonstrate Physics:** Show objects falling, bouncing, or moving to explain physical concepts
+      -   **Emphasize Key Points:** Scale up or pulse important elements to draw attention
+      -   **Show Transformations:** Rotate, morph, or move elements to show state changes
+      -   **Create Engaging Visuals:** Add subtle motion to keep the explanation dynamic and interesting
+      -   **Illustrate Concepts:** Use motion to make abstract concepts concrete (e.g., packets traveling through a network)
+
+      **How Motion Works:**
+      1.  **Progressive Drawing First:** An element draws progressively (stroke by stroke) as usual
+      2.  **Motion After Completion:** Once fully drawn, the GSAP animation automatically starts
+      3.  **Smooth Transformations:** The element smoothly animates from its initial state to the target state
+
+      **The \`animate\` Property:**
+      Add an \`animate\` property to any drawing command or annotation to make it move. This property defines the motion animation:
+
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": -200 },
+        "radius": 30,
+        "color": "#06b6d4",
+        "id": "ball",
+        "animate": {
+          "from": { "y": 0, "scale": 1 },
+          "to": { "y": 300, "scale": 1.2 },
+          "duration": 1.5,
+          "ease": "bounce.out",
+          "repeat": 0
+        }
+      }
+      \`\`\`
+
+      **Animation Properties:**
+      -   **from:** Starting state (optional - defaults to identity). Properties:
+          -   \`x\`: Horizontal offset (pixels, can be negative)
+          -   \`y\`: Vertical offset (pixels, can be negative)
+          -   \`scale\`: Size multiplier (1 = normal, 2 = double, 0.5 = half)
+          -   \`rotation\`: Degrees of rotation (0-360, or negative for counter-clockwise)
+          -   \`opacity\`: Transparency (0 = invisible, 1 = fully visible)
+      -   **to:** Target state (required). Same properties as \`from\`
+      -   **duration:** Animation length in seconds (e.g., 1, 1.5, 2.5)
+      -   **ease:** Easing function name (see below)
+      -   **delay:** Wait time before starting (seconds)
+      -   **repeat:** Number of times to repeat (-1 for infinite loop, 0 for once)
+
+      **Recommended Easing Functions:**
+      Choose the right easing for the type of motion:
+      -   **Natural Motion:** "power2.out", "power3.out" - Smooth deceleration (most common)
+      -   **Bouncy/Playful:** "bounce.out", "elastic.out" - Fun, energetic motion
+      -   **Smooth & Steady:** "power1.inOut", "sine.inOut" - Even pace
+      -   **Quick Start:** "back.out" - Slight overshoot for emphasis
+      -   **Continuous:** "linear" - Constant speed (for infinite loops)
+      -   **Spring Effect:** "elastic.inOut" - Springy, oscillating motion
+
+      **Motion Animation Examples:**
+
+      1.  **Falling Ball (Physics):**
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": -300 },
+        "radius": 25,
+        "id": "ball_falling",
+        "animate": {
+          "from": { "y": 0 },
+          "to": { "y": 400 },
+          "duration": 1.2,
+          "ease": "bounce.out"
+        }
+      }
+      \`\`\`
+
+      2.  **Data Packet Moving Through Network:**
+      \`\`\`json
+      {
+        "type": "rectangle",
+        "center": { "x": -400, "y": 0 },
+        "width": 60,
+        "height": 40,
+        "id": "packet",
+        "animate": {
+          "from": { "x": 0 },
+          "to": { "x": 800 },
+          "duration": 2,
+          "ease": "power2.inOut"
+        }
+      }
+      \`\`\`
+
+      3.  **Pulsing Emphasis (Draw Attention):**
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": 0 },
+        "radius": 50,
+        "id": "important_node",
+        "animate": {
+          "from": { "scale": 1 },
+          "to": { "scale": 1.3 },
+          "duration": 0.8,
+          "ease": "power2.inOut",
+          "repeat": -1
+        }
+      }
+      \`\`\`
+
+      4.  **Rotating Gear:**
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": 0 },
+        "radius": 80,
+        "id": "gear",
+        "animate": {
+          "from": { "rotation": 0 },
+          "to": { "rotation": 360 },
+          "duration": 3,
+          "ease": "linear",
+          "repeat": -1
+        }
+      }
+      \`\`\`
+
+      5.  **Fading In Text (Emphasis):**
+      \`\`\`json
+      {
+        "type": "text",
+        "text": "Key Insight!",
+        "point": { "x": 0, "y": -100 },
+        "fontSize": 32,
+        "id": "insight_label",
+        "animate": {
+          "from": { "opacity": 0, "y": 20 },
+          "to": { "opacity": 1, "y": 0 },
+          "duration": 1,
+          "ease": "power3.out"
+        }
+      }
+      \`\`\`
+
+      **Important Motion Guidelines:**
+      1.  **Use Motion Frequently:** Most explanations should include at least 2-3 animated elements for visual engagement
+      2.  **Keep Drawing Fast:** Speed up the progressive drawing animation so motion has time to shine
+      3.  **Match Motion to Concept:** The type of motion should reinforce what you're teaching
+      4.  **Coordinate Timing:** Use \`delay\` to sequence multiple animations
+      5.  **Infinite Loops for Processes:** Use \`repeat: -1\` for ongoing processes (e.g., rotating gears, flowing water)
+      6.  **One-Shot for Events:** Use \`repeat: 0\` for singular events (e.g., ball falling, data arriving)
+      7.  **Reasonable Durations:** Most animations should be 0.8-2.5 seconds. Too fast is jarring, too slow is boring
+      8.  **Every Element Can Animate:** Circles, rectangles, paths, arrows, and text can all have motion
+
       **Example - WRONG (elements pop in):**
       {
         "stepName": "The System",
@@ -390,13 +545,59 @@ export const getInitialPlanStreaming = async (
             "stepName": "string - SHORT name for this step (2-5 words, e.g., 'Introduction', 'Building Blocks', 'Final Concept')",
             "explanation": "string - what you'll say during this step",
             "drawingPlan": [
-              { "type": "circle", "center": { "x": number, "y": number }, "radius": number, "color": "#hex", "id": "string", "isFilled": boolean },
-              { "type": "rectangle", "center": { "x": number, "y": number }, "width": number, "height": number, "color": "#hex", "id": "string", "isFilled": boolean },
-              { "type": "path", "points": [{ "x": number, "y": number }], "color": "#hex", "id": "string" }
+              {
+                "type": "circle",
+                "center": { "x": number, "y": number },
+                "radius": number,
+                "color": "#hex",
+                "id": "string",
+                "isFilled": boolean,
+                "animate": {
+                  "from": { "x": number, "y": number, "scale": number, "rotation": number, "opacity": number },
+                  "to": { "x": number, "y": number, "scale": number, "rotation": number, "opacity": number },
+                  "duration": number,
+                  "ease": "string",
+                  "delay": number,
+                  "repeat": number
+                }
+              },
+              {
+                "type": "rectangle",
+                "center": { "x": number, "y": number },
+                "width": number,
+                "height": number,
+                "color": "#hex",
+                "id": "string",
+                "isFilled": boolean,
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              },
+              {
+                "type": "path",
+                "points": [{ "x": number, "y": number }],
+                "color": "#hex",
+                "id": "string",
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              }
             ],
             "annotations": [
-              { "type": "text", "text": "string", "point": { "x": number, "y": number }, "fontSize": number, "color": "#hex", "id": "string", "isContextual": boolean },
-              { "type": "arrow", "start": { "x": number, "y": number }, "end": { "x": number, "y": number }, "color": "#hex", "id": "string" }
+              {
+                "type": "text",
+                "text": "string",
+                "point": { "x": number, "y": number },
+                "fontSize": number,
+                "color": "#hex",
+                "id": "string",
+                "isContextual": boolean,
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              },
+              {
+                "type": "arrow",
+                "start": { "x": number, "y": number },
+                "end": { "x": number, "y": number },
+                "color": "#hex",
+                "id": "string",
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              }
             ],
             "highlightIds": ["string"],
             "retainedLabelIds": ["string"]
@@ -407,20 +608,57 @@ export const getInitialPlanStreaming = async (
       **EXAMPLE VALID OUTPUT:**
 
       {
-        "explanation": "Let me show you how a simple switch works using a creative analogy.",
+        "explanation": "Let me show you how a simple switch works using a creative analogy with motion.",
         "whiteboard": [
           {
             "origin": { "x": 0, "y": 0 },
             "stepName": "The Drawbridge",
             "explanation": "Imagine a drawbridge over a river. When it's down, cars can cross.",
             "drawingPlan": [
-              { "type": "rectangle", "center": { "x": 0, "y": 100 }, "width": 400, "height": 20, "color": "#06b6d4", "id": "bridge" }
+              {
+                "type": "rectangle",
+                "center": { "x": 0, "y": 100 },
+                "width": 400,
+                "height": 20,
+                "color": "#06b6d4",
+                "id": "bridge",
+                "animate": {
+                  "from": { "rotation": 0 },
+                  "to": { "rotation": -45 },
+                  "duration": 1.5,
+                  "ease": "power2.out"
+                }
+              }
             ],
             "annotations": [
               { "type": "text", "text": "Drawbridge", "point": { "x": 0, "y": -50 }, "fontSize": 24, "color": "#FFFFFF", "id": "label_bridge" }
             ],
             "highlightIds": [],
             "retainedLabelIds": []
+          },
+          {
+            "origin": { "x": 0, "y": 0 },
+            "stepName": "Car Crossing",
+            "explanation": "Now watch a car drive across the bridge!",
+            "drawingPlan": [
+              {
+                "type": "circle",
+                "center": { "x": -300, "y": 90 },
+                "radius": 15,
+                "color": "#facc15",
+                "id": "car",
+                "isFilled": true,
+                "animate": {
+                  "from": { "x": 0 },
+                  "to": { "x": 600 },
+                  "duration": 2,
+                  "ease": "power1.inOut"
+                }
+              }
+            ],
+            "annotations": [],
+            "highlightIds": [],
+            "retainedLabelIds": ["label_bridge"]
           }
         ]
       }
@@ -646,6 +884,161 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
 
       3.  **Filled Shapes Use Sparingly:** Filled shapes (\`isFilled: true\`) should be used ONLY for tiny marker dots or critical focal points. They appear instantly, so use them rarely.
 
+      **GSAP Motion Animation System (IMPORTANT - Bring Explanations to Life)**
+      You now have access to a powerful motion animation system powered by GSAP. This allows you to add movement, scaling, rotation, and other transformations to elements AFTER they finish drawing.
+
+      **When to Use Motion Animations:**
+      Use motion animations FREQUENTLY to create engaging, dynamic explanations. Motion should be used in most explanations to:
+      -   **Show Flow:** Animate arrows or objects moving along paths to demonstrate data flow, processes, or sequences
+      -   **Demonstrate Physics:** Show objects falling, bouncing, or moving to explain physical concepts
+      -   **Emphasize Key Points:** Scale up or pulse important elements to draw attention
+      -   **Show Transformations:** Rotate, morph, or move elements to show state changes
+      -   **Create Engaging Visuals:** Add subtle motion to keep the explanation dynamic and interesting
+      -   **Illustrate Concepts:** Use motion to make abstract concepts concrete (e.g., packets traveling through a network)
+
+      **How Motion Works:**
+      1.  **Progressive Drawing First:** An element draws progressively (stroke by stroke) as usual
+      2.  **Motion After Completion:** Once fully drawn, the GSAP animation automatically starts
+      3.  **Smooth Transformations:** The element smoothly animates from its initial state to the target state
+
+      **The \`animate\` Property:**
+      Add an \`animate\` property to any drawing command or annotation to make it move. This property defines the motion animation:
+
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": -200 },
+        "radius": 30,
+        "color": "#06b6d4",
+        "id": "ball",
+        "animate": {
+          "from": { "y": 0, "scale": 1 },
+          "to": { "y": 300, "scale": 1.2 },
+          "duration": 1.5,
+          "ease": "bounce.out",
+          "repeat": 0
+        }
+      }
+      \`\`\`
+
+      **Animation Properties:**
+      -   **from:** Starting state (optional - defaults to identity). Properties:
+          -   \`x\`: Horizontal offset (pixels, can be negative)
+          -   \`y\`: Vertical offset (pixels, can be negative)
+          -   \`scale\`: Size multiplier (1 = normal, 2 = double, 0.5 = half)
+          -   \`rotation\`: Degrees of rotation (0-360, or negative for counter-clockwise)
+          -   \`opacity\`: Transparency (0 = invisible, 1 = fully visible)
+      -   **to:** Target state (required). Same properties as \`from\`
+      -   **duration:** Animation length in seconds (e.g., 1, 1.5, 2.5)
+      -   **ease:** Easing function name (see below)
+      -   **delay:** Wait time before starting (seconds)
+      -   **repeat:** Number of times to repeat (-1 for infinite loop, 0 for once)
+
+      **Recommended Easing Functions:**
+      Choose the right easing for the type of motion:
+      -   **Natural Motion:** "power2.out", "power3.out" - Smooth deceleration (most common)
+      -   **Bouncy/Playful:** "bounce.out", "elastic.out" - Fun, energetic motion
+      -   **Smooth & Steady:** "power1.inOut", "sine.inOut" - Even pace
+      -   **Quick Start:** "back.out" - Slight overshoot for emphasis
+      -   **Continuous:** "linear" - Constant speed (for infinite loops)
+      -   **Spring Effect:** "elastic.inOut" - Springy, oscillating motion
+
+      **Motion Animation Examples:**
+
+      1.  **Falling Ball (Physics):**
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": -300 },
+        "radius": 25,
+        "id": "ball_falling",
+        "animate": {
+          "from": { "y": 0 },
+          "to": { "y": 400 },
+          "duration": 1.2,
+          "ease": "bounce.out"
+        }
+      }
+      \`\`\`
+
+      2.  **Data Packet Moving Through Network:**
+      \`\`\`json
+      {
+        "type": "rectangle",
+        "center": { "x": -400, "y": 0 },
+        "width": 60,
+        "height": 40,
+        "id": "packet",
+        "animate": {
+          "from": { "x": 0 },
+          "to": { "x": 800 },
+          "duration": 2,
+          "ease": "power2.inOut"
+        }
+      }
+      \`\`\`
+
+      3.  **Pulsing Emphasis (Draw Attention):**
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": 0 },
+        "radius": 50,
+        "id": "important_node",
+        "animate": {
+          "from": { "scale": 1 },
+          "to": { "scale": 1.3 },
+          "duration": 0.8,
+          "ease": "power2.inOut",
+          "repeat": -1
+        }
+      }
+      \`\`\`
+
+      4.  **Rotating Gear:**
+      \`\`\`json
+      {
+        "type": "circle",
+        "center": { "x": 0, "y": 0 },
+        "radius": 80,
+        "id": "gear",
+        "animate": {
+          "from": { "rotation": 0 },
+          "to": { "rotation": 360 },
+          "duration": 3,
+          "ease": "linear",
+          "repeat": -1
+        }
+      }
+      \`\`\`
+
+      5.  **Fading In Text (Emphasis):**
+      \`\`\`json
+      {
+        "type": "text",
+        "text": "Key Insight!",
+        "point": { "x": 0, "y": -100 },
+        "fontSize": 32,
+        "id": "insight_label",
+        "animate": {
+          "from": { "opacity": 0, "y": 20 },
+          "to": { "opacity": 1, "y": 0 },
+          "duration": 1,
+          "ease": "power3.out"
+        }
+      }
+      \`\`\`
+
+      **Important Motion Guidelines:**
+      1.  **Use Motion Frequently:** Most explanations should include at least 2-3 animated elements for visual engagement
+      2.  **Keep Drawing Fast:** Speed up the progressive drawing animation so motion has time to shine
+      3.  **Match Motion to Concept:** The type of motion should reinforce what you're teaching
+      4.  **Coordinate Timing:** Use \`delay\` to sequence multiple animations
+      5.  **Infinite Loops for Processes:** Use \`repeat: -1\` for ongoing processes (e.g., rotating gears, flowing water)
+      6.  **One-Shot for Events:** Use \`repeat: 0\` for singular events (e.g., ball falling, data arriving)
+      7.  **Reasonable Durations:** Most animations should be 0.8-2.5 seconds. Too fast is jarring, too slow is boring
+      8.  **Every Element Can Animate:** Circles, rectangles, paths, arrows, and text can all have motion
+
       **Example - WRONG (elements pop in):**
       {
         "stepName": "The System",
@@ -757,13 +1150,59 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
             "stepName": "string - SHORT name for this step (2-5 words, e.g., 'Introduction', 'Building Blocks', 'Final Concept')",
             "explanation": "string - what you'll say during this step",
             "drawingPlan": [
-              { "type": "circle", "center": { "x": number, "y": number }, "radius": number, "color": "#hex", "id": "string", "isFilled": boolean },
-              { "type": "rectangle", "center": { "x": number, "y": number }, "width": number, "height": number, "color": "#hex", "id": "string", "isFilled": boolean },
-              { "type": "path", "points": [{ "x": number, "y": number }], "color": "#hex", "id": "string" }
+              {
+                "type": "circle",
+                "center": { "x": number, "y": number },
+                "radius": number,
+                "color": "#hex",
+                "id": "string",
+                "isFilled": boolean,
+                "animate": {
+                  "from": { "x": number, "y": number, "scale": number, "rotation": number, "opacity": number },
+                  "to": { "x": number, "y": number, "scale": number, "rotation": number, "opacity": number },
+                  "duration": number,
+                  "ease": "string",
+                  "delay": number,
+                  "repeat": number
+                }
+              },
+              {
+                "type": "rectangle",
+                "center": { "x": number, "y": number },
+                "width": number,
+                "height": number,
+                "color": "#hex",
+                "id": "string",
+                "isFilled": boolean,
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              },
+              {
+                "type": "path",
+                "points": [{ "x": number, "y": number }],
+                "color": "#hex",
+                "id": "string",
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              }
             ],
             "annotations": [
-              { "type": "text", "text": "string", "point": { "x": number, "y": number }, "fontSize": number, "color": "#hex", "id": "string", "isContextual": boolean },
-              { "type": "arrow", "start": { "x": number, "y": number }, "end": { "x": number, "y": number }, "color": "#hex", "id": "string" }
+              {
+                "type": "text",
+                "text": "string",
+                "point": { "x": number, "y": number },
+                "fontSize": number,
+                "color": "#hex",
+                "id": "string",
+                "isContextual": boolean,
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              },
+              {
+                "type": "arrow",
+                "start": { "x": number, "y": number },
+                "end": { "x": number, "y": number },
+                "color": "#hex",
+                "id": "string",
+                "animate": { "from": {...}, "to": {...}, "duration": number, "ease": "string" }
+              }
             ],
             "highlightIds": ["string"],
             "retainedLabelIds": ["string"]
@@ -774,20 +1213,57 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       **EXAMPLE VALID OUTPUT:**
 
       {
-        "explanation": "Let me show you how a simple switch works using a creative analogy.",
+        "explanation": "Let me show you how a simple switch works using a creative analogy with motion.",
         "whiteboard": [
           {
             "origin": { "x": 0, "y": 0 },
             "stepName": "The Drawbridge",
             "explanation": "Imagine a drawbridge over a river. When it's down, cars can cross.",
             "drawingPlan": [
-              { "type": "rectangle", "center": { "x": 0, "y": 100 }, "width": 400, "height": 20, "color": "#06b6d4", "id": "bridge" }
+              {
+                "type": "rectangle",
+                "center": { "x": 0, "y": 100 },
+                "width": 400,
+                "height": 20,
+                "color": "#06b6d4",
+                "id": "bridge",
+                "animate": {
+                  "from": { "rotation": 0 },
+                  "to": { "rotation": -45 },
+                  "duration": 1.5,
+                  "ease": "power2.out"
+                }
+              }
             ],
             "annotations": [
               { "type": "text", "text": "Drawbridge", "point": { "x": 0, "y": -50 }, "fontSize": 24, "color": "#FFFFFF", "id": "label_bridge" }
             ],
             "highlightIds": [],
             "retainedLabelIds": []
+          },
+          {
+            "origin": { "x": 0, "y": 0 },
+            "stepName": "Car Crossing",
+            "explanation": "Now watch a car drive across the bridge!",
+            "drawingPlan": [
+              {
+                "type": "circle",
+                "center": { "x": -300, "y": 90 },
+                "radius": 15,
+                "color": "#facc15",
+                "id": "car",
+                "isFilled": true,
+                "animate": {
+                  "from": { "x": 0 },
+                  "to": { "x": 600 },
+                  "duration": 2,
+                  "ease": "power1.inOut"
+                }
+              }
+            ],
+            "annotations": [],
+            "highlightIds": [],
+            "retainedLabelIds": ["label_bridge"]
           }
         ]
       }

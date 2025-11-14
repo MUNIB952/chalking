@@ -261,61 +261,98 @@ const drawAnimatedStrikethrough = (ctx: CanvasRenderingContext2D, annotation: St
 };
 
 
-const drawStepContent = (ctx: CanvasRenderingContext2D, step: WhiteboardStep, animationProgress: number, idsToExclude?: Set<string>) => {
-  if (!step.origin) return;
+// This needs to be defined outside the component to avoid recreating it
+// We'll need to pass the necessary dependencies as parameters
+const createDrawStepContent = (getGSAPState: (id: string | undefined) => GSAPAnimationState, startGSAPAnimation: (item: DrawingCommand | Annotation) => void) => {
+  return (ctx: CanvasRenderingContext2D, step: WhiteboardStep, animationProgress: number, idsToExclude?: Set<string>) => {
+    if (!step.origin) return;
 
-  const defaultColor = '#FFFFFF';
-  ctx.strokeStyle = defaultColor;
-  ctx.lineWidth = 3;
-  ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-  ctx.fillStyle = defaultColor;
+    const defaultColor = '#FFFFFF';
+    ctx.strokeStyle = defaultColor;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.fillStyle = defaultColor;
 
-  const allItems = [...(step.drawingPlan || []), ...step.annotations];
-  const itemsToDraw = idsToExclude 
-      ? allItems.filter(item => !item.id || !idsToExclude.has(item.id))
-      : allItems;
+    const allItems = [...(step.drawingPlan || []), ...step.annotations];
+    const itemsToDraw = idsToExclude
+        ? allItems.filter(item => !item.id || !idsToExclude.has(item.id))
+        : allItems;
 
-  const totalItems = itemsToDraw.length;
-  if (totalItems === 0) return;
+    const totalItems = itemsToDraw.length;
+    if (totalItems === 0) return;
 
-  const currentItemIndexFloat = animationProgress * totalItems;
-  const currentItemIndex = Math.floor(currentItemIndexFloat);
+    const currentItemIndexFloat = animationProgress * totalItems;
+    const currentItemIndex = Math.floor(currentItemIndexFloat);
 
-  const drawItem = (item: DrawingCommand | Annotation, progress: number) => {
-      let itemColor = item.color || defaultColor;
+    const drawItem = (item: DrawingCommand | Annotation, progress: number) => {
+        let itemColor = item.color || defaultColor;
 
-      // Expanded forbidden colors list - all black and very dark colors are prohibited
-      const forbiddenColors = [
-        '#000000', '#0a0a0a', '#18181b', '#333333', '#000',
-        '#111111', '#222222', '#1a1a1a', '#0d0d0d', '#050505',
-        'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)'
-      ];
-      if (forbiddenColors.includes(itemColor.toLowerCase())) {
-          console.warn(`Forbidden color detected: ${itemColor}. Replacing with white.`);
-          itemColor = defaultColor;
-      }
+        // Expanded forbidden colors list - all black and very dark colors are prohibited
+        const forbiddenColors = [
+          '#000000', '#0a0a0a', '#18181b', '#333333', '#000',
+          '#111111', '#222222', '#1a1a1a', '#0d0d0d', '#050505',
+          'black', 'rgb(0,0,0)', 'rgb(0, 0, 0)'
+        ];
+        if (forbiddenColors.includes(itemColor.toLowerCase())) {
+            console.warn(`Forbidden color detected: ${itemColor}. Replacing with white.`);
+            itemColor = defaultColor;
+        }
 
-      ctx.strokeStyle = itemColor;
-      ctx.fillStyle = itemColor;
+        ctx.strokeStyle = itemColor;
+        ctx.fillStyle = itemColor;
 
-      if (item.type === 'rectangle') drawAnimatedRectangle(ctx, item, step.origin, progress);
-      if (item.type === 'circle') drawAnimatedCircle(ctx, item, step.origin, progress);
-      if (item.type === 'path') drawAnimatedPath(ctx, item.points, step.origin, progress);
-      if (item.type === 'arrow') drawAnimatedArrow(ctx, item, step.origin, progress);
-      if (item.type === 'text') drawAnimatedText(ctx, item, step.origin, progress);
-      if (item.type === 'strikethrough') drawAnimatedStrikethrough(ctx, item, step.origin, progress);
+        // Get GSAP animation state for this item
+        const gsapState = getGSAPState(item.id);
+
+        // Apply GSAP transformations
+        ctx.save();
+
+        // Calculate center point for transformation
+        let centerX = (step.origin as AbsolutePoint).x;
+        let centerY = (step.origin as AbsolutePoint).y;
+
+        if ('center' in item && item.center) {
+          centerX += (item.center as AbsolutePoint).x;
+          centerY += (item.center as AbsolutePoint).y;
+        } else if ('point' in item && item.point) {
+          centerX += (item.point as AbsolutePoint).x;
+          centerY += (item.point as AbsolutePoint).y;
+        }
+
+        // Apply GSAP transformations (translate, rotate, scale)
+        ctx.translate(centerX + gsapState.x, centerY + gsapState.y);
+        ctx.rotate(gsapState.rotation * Math.PI / 180); // Convert degrees to radians
+        ctx.scale(gsapState.scale, gsapState.scale);
+        ctx.translate(-centerX, -centerY);
+        ctx.globalAlpha *= gsapState.opacity;
+
+        // Draw the item
+        if (item.type === 'rectangle') drawAnimatedRectangle(ctx, item, step.origin, progress);
+        if (item.type === 'circle') drawAnimatedCircle(ctx, item, step.origin, progress);
+        if (item.type === 'path') drawAnimatedPath(ctx, item.points, step.origin, progress);
+        if (item.type === 'arrow') drawAnimatedArrow(ctx, item, step.origin, progress);
+        if (item.type === 'text') drawAnimatedText(ctx, item, step.origin, progress);
+        if (item.type === 'strikethrough') drawAnimatedStrikethrough(ctx, item, step.origin, progress);
+
+        ctx.restore();
+
+        // If this item just finished drawing (progress === 1), start GSAP animation
+        if (progress === 1 && item.animate && item.id) {
+          startGSAPAnimation(item);
+        }
+    };
+
+    for (let i = 0; i < currentItemIndex; i++) {
+        drawItem(itemsToDraw[i], 1);
+    }
+
+    if (currentItemIndex < totalItems) {
+        const item = itemsToDraw[currentItemIndex];
+        const itemProgress = currentItemIndexFloat - currentItemIndex;
+        drawItem(item, itemProgress);
+    }
   };
-
-  for (let i = 0; i < currentItemIndex; i++) {
-      drawItem(itemsToDraw[i], 1);
-  }
-
-  if (currentItemIndex < totalItems) {
-      const item = itemsToDraw[currentItemIndex];
-      const itemProgress = currentItemIndexFloat - currentItemIndex;
-      drawItem(item, itemProgress);
-  }
 };
 
 const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, progress: number): Point => {
@@ -378,6 +415,15 @@ const getPenTipPosition = (item: DrawingCommand | Annotation, origin: Point, pro
 };
 
 
+// GSAP animation state type
+type GSAPAnimationState = {
+  x: number;
+  y: number;
+  scale: number;
+  rotation: number;
+  opacity: number;
+};
+
 export const Canvas: React.FC<CanvasProps> = ({
   steps,
   currentStepIndex,
@@ -391,12 +437,89 @@ export const Canvas: React.FC<CanvasProps> = ({
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, zoom: 1 });
   const penTipPosition = useRef<Point | null>(null);
 
+  // GSAP animation states: Map of element ID to animated properties
+  const gsapStates = useRef<Map<string, GSAPAnimationState>>(new Map());
+  const gsapTweens = useRef<Map<string, gsap.core.Tween>>(new Map());
+  const completedItems = useRef<Set<string>>(new Set());
+
+  // Helper: Get GSAP animation state for an element (returns identity if no animation)
+  const getGSAPState = useCallback((id: string | undefined): GSAPAnimationState => {
+    if (!id || !gsapStates.current.has(id)) {
+      return { x: 0, y: 0, scale: 1, rotation: 0, opacity: 1 };
+    }
+    return gsapStates.current.get(id)!;
+  }, []);
+
+  // Helper: Start GSAP animation for an element when it finishes drawing
+  const startGSAPAnimation = useCallback((item: DrawingCommand | Annotation) => {
+    if (!item.id || !item.animate || completedItems.current.has(item.id)) return;
+
+    completedItems.current.add(item.id);
+
+    const config = item.animate;
+    const initialState: GSAPAnimationState = {
+      x: config.from?.x ?? 0,
+      y: config.from?.y ?? 0,
+      scale: config.from?.scale ?? 1,
+      rotation: config.from?.rotation ?? 0,
+      opacity: config.from?.opacity ?? 1,
+    };
+
+    const targetState: GSAPAnimationState = {
+      x: config.to?.x ?? initialState.x,
+      y: config.to?.y ?? initialState.y,
+      scale: config.to?.scale ?? initialState.scale,
+      rotation: config.to?.rotation ?? initialState.rotation,
+      opacity: config.to?.opacity ?? initialState.opacity,
+    };
+
+    // Set initial state
+    gsapStates.current.set(item.id, initialState);
+
+    // Kill any existing tween for this element
+    const existingTween = gsapTweens.current.get(item.id);
+    if (existingTween) {
+      existingTween.kill();
+    }
+
+    // Create GSAP tween
+    const tween = gsap.to(initialState, {
+      ...targetState,
+      duration: config.duration ?? 1,
+      ease: config.ease ?? 'power2.out',
+      delay: config.delay ?? 0,
+      repeat: config.repeat ?? 0,
+      onUpdate: () => {
+        // Update the state map so render loop picks up changes
+        gsapStates.current.set(item.id!, { ...initialState });
+      },
+    });
+
+    gsapTweens.current.set(item.id, tween);
+  }, []);
+
   // Expose setViewTransform for InteractionLayer
   useEffect(() => {
     (window as any).__setCanvasViewTransform = setViewTransform;
   }, []);
-  
+
   const showLoader = useMemo(() => status === 'THINKING' || status === 'PREPARING', [status]);
+
+  // Create the drawStepContent function with access to GSAP state
+  const drawStepContent = useMemo(() => {
+    return createDrawStepContent(getGSAPState, startGSAPAnimation);
+  }, [getGSAPState, startGSAPAnimation]);
+
+  // Cleanup GSAP animations on unmount or when steps change
+  useEffect(() => {
+    return () => {
+      // Kill all active tweens
+      gsapTweens.current.forEach(tween => tween.kill());
+      gsapTweens.current.clear();
+      gsapStates.current.clear();
+      completedItems.current.clear();
+    };
+  }, [steps]);
 
   const resolvedSteps = useMemo(() => {
     if (!steps || steps.length === 0) return [];
