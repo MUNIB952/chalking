@@ -507,8 +507,8 @@ export const Canvas: React.FC<CanvasProps> = ({
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // FIX 4: Cap device pixel ratio to 1.5x to reduce CPU usage (saves 30-40%)
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    // FIX 4: Lower device pixel ratio to 1x to reduce CPU usage (saves 10-15%)
+    const dpr = 1; // Changed from 1.5x to 1x for better performance
     const rect = canvas.getBoundingClientRect();
 
     if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
@@ -617,7 +617,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     // FIX 2: Dynamic framerate based on animation state (saves 60-70% when not animating)
     const getTargetFPS = () => {
-      if (status === 'DRAWING' && !isPaused) return 60; // Smooth animation
+      if (status === 'DRAWING' && !isPaused) return 30; // Changed from 60 to 30 FPS (still smooth, saves 15-20% CPU)
       if (isPaused) return 0; // STOP completely when paused (saves 100% CPU)
       if (status === 'DONE') return 5; // Very low framerate when done (in case of interactions)
       return 30; // Default
