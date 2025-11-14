@@ -434,6 +434,83 @@ export const getInitialPlanStreaming = async (
       7.  **Reasonable Durations:** Most animations should be 0.8-2.5 seconds. Too fast is jarring, too slow is boring
       8.  **Every Element Can Animate:** Circles, rectangles, paths, arrows, and text can all have motion
 
+      **Advanced Timing Control (drawDelay & drawDuration)**
+      You now have precise control over WHEN and HOW FAST each element draws:
+
+      -   **drawDelay** (seconds): When to start drawing this element (from step start)
+          -   Default: Sequential (each item waits for previous to finish)
+          -   Simultaneous: Set same drawDelay for multiple items to draw them together
+          -   Staggered: Use incrementing delays (0.2s, 0.4s, 0.6s) for wave effects
+
+      -   **drawDuration** (seconds): How long the progressive drawing takes
+          -   Default: Automatically calculated to fit in first 40% of step
+          -   Fast elements: 0.3-0.8 seconds (quick appearance)
+          -   Slow elements: 1-2 seconds (deliberate, detailed drawing)
+
+      **Timing Examples:**
+
+      1.  **Simultaneous Drawing (3 circles at once):**
+      \`\`\`json
+      {
+        "drawingPlan": [
+          { "type": "circle", "center": {-100, 0}, "radius": 50, "drawDelay": 0, "drawDuration": 0.8 },
+          { "type": "circle", "center": {0, 0}, "radius": 50, "drawDelay": 0, "drawDuration": 0.8 },
+          { "type": "circle", "center": {100, 0}, "radius": 50, "drawDelay": 0, "drawDuration": 0.8 }
+        ]
+      }
+      \`\`\`
+
+      2.  **Staggered Wave Effect:**
+      \`\`\`json
+      {
+        "drawingPlan": [
+          { "type": "circle", "drawDelay": 0, "drawDuration": 0.5 },
+          { "type": "circle", "drawDelay": 0.3, "drawDuration": 0.5 },
+          { "type": "circle", "drawDelay": 0.6, "drawDuration": 0.5 }
+        ]
+      }
+      \`\`\`
+
+      3.  **Draw Then Animate Sequence:**
+      \`\`\`json
+      {
+        "drawingPlan": [
+          {
+            "type": "rectangle",
+            "drawDelay": 0,
+            "drawDuration": 0.6,
+            "animate": {
+              "from": { "x": 0 },
+              "to": { "x": 400 },
+              "duration": 1.5,
+              "delay": 0  // Motion starts RIGHT after drawing finishes
+            }
+          }
+        ]
+      }
+      \`\`\`
+
+      4.  **Delayed Motion (drawing finishes, pause, then motion):**
+      \`\`\`json
+      {
+        "type": "circle",
+        "drawDelay": 0,
+        "drawDuration": 0.5,
+        "animate": {
+          "from": { "scale": 1 },
+          "to": { "scale": 1.5 },
+          "delay": 1.0  // Wait 1 second AFTER drawing before pulsing
+        }
+      }
+      \`\`\`
+
+      **Default Timing Strategy:**
+      If you don't specify drawDelay/drawDuration, the system uses smart defaults:
+      -   All items draw sequentially (one after another)
+      -   Drawing completes in first 40% of step duration
+      -   Motion animations have the remaining 60% to play
+      -   This ensures narration stays in sync with visuals
+
       **Example - WRONG (elements pop in):**
       {
         "stepName": "The System",
@@ -1038,6 +1115,83 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       6.  **One-Shot for Events:** Use \`repeat: 0\` for singular events (e.g., ball falling, data arriving)
       7.  **Reasonable Durations:** Most animations should be 0.8-2.5 seconds. Too fast is jarring, too slow is boring
       8.  **Every Element Can Animate:** Circles, rectangles, paths, arrows, and text can all have motion
+
+      **Advanced Timing Control (drawDelay & drawDuration)**
+      You now have precise control over WHEN and HOW FAST each element draws:
+
+      -   **drawDelay** (seconds): When to start drawing this element (from step start)
+          -   Default: Sequential (each item waits for previous to finish)
+          -   Simultaneous: Set same drawDelay for multiple items to draw them together
+          -   Staggered: Use incrementing delays (0.2s, 0.4s, 0.6s) for wave effects
+
+      -   **drawDuration** (seconds): How long the progressive drawing takes
+          -   Default: Automatically calculated to fit in first 40% of step
+          -   Fast elements: 0.3-0.8 seconds (quick appearance)
+          -   Slow elements: 1-2 seconds (deliberate, detailed drawing)
+
+      **Timing Examples:**
+
+      1.  **Simultaneous Drawing (3 circles at once):**
+      \`\`\`json
+      {
+        "drawingPlan": [
+          { "type": "circle", "center": {-100, 0}, "radius": 50, "drawDelay": 0, "drawDuration": 0.8 },
+          { "type": "circle", "center": {0, 0}, "radius": 50, "drawDelay": 0, "drawDuration": 0.8 },
+          { "type": "circle", "center": {100, 0}, "radius": 50, "drawDelay": 0, "drawDuration": 0.8 }
+        ]
+      }
+      \`\`\`
+
+      2.  **Staggered Wave Effect:**
+      \`\`\`json
+      {
+        "drawingPlan": [
+          { "type": "circle", "drawDelay": 0, "drawDuration": 0.5 },
+          { "type": "circle", "drawDelay": 0.3, "drawDuration": 0.5 },
+          { "type": "circle", "drawDelay": 0.6, "drawDuration": 0.5 }
+        ]
+      }
+      \`\`\`
+
+      3.  **Draw Then Animate Sequence:**
+      \`\`\`json
+      {
+        "drawingPlan": [
+          {
+            "type": "rectangle",
+            "drawDelay": 0,
+            "drawDuration": 0.6,
+            "animate": {
+              "from": { "x": 0 },
+              "to": { "x": 400 },
+              "duration": 1.5,
+              "delay": 0  // Motion starts RIGHT after drawing finishes
+            }
+          }
+        ]
+      }
+      \`\`\`
+
+      4.  **Delayed Motion (drawing finishes, pause, then motion):**
+      \`\`\`json
+      {
+        "type": "circle",
+        "drawDelay": 0,
+        "drawDuration": 0.5,
+        "animate": {
+          "from": { "scale": 1 },
+          "to": { "scale": 1.5 },
+          "delay": 1.0  // Wait 1 second AFTER drawing before pulsing
+        }
+      }
+      \`\`\`
+
+      **Default Timing Strategy:**
+      If you don't specify drawDelay/drawDuration, the system uses smart defaults:
+      -   All items draw sequentially (one after another)
+      -   Drawing completes in first 40% of step duration
+      -   Motion animations have the remaining 60% to play
+      -   This ensures narration stays in sync with visuals
 
       **Example - WRONG (elements pop in):**
       {

@@ -13,6 +13,7 @@ interface CanvasProps {
   key: number; // To force re-mount and reset
   explanation: string;
   onFocusRequest?: () => void;
+  stepDurations?: number[]; // Audio duration for each step (seconds)
 }
 
 type AllDrawableItem = (DrawingCommand | Annotation) & { stepOrigin: Point };
@@ -263,8 +264,12 @@ const drawAnimatedStrikethrough = (ctx: CanvasRenderingContext2D, annotation: St
 
 // This needs to be defined outside the component to avoid recreating it
 // We'll need to pass the necessary dependencies as parameters
-const createDrawStepContent = (getGSAPState: (id: string | undefined) => GSAPAnimationState, startGSAPAnimation: (item: DrawingCommand | Annotation) => void) => {
-  return (ctx: CanvasRenderingContext2D, step: WhiteboardStep, animationProgress: number, idsToExclude?: Set<string>) => {
+const createDrawStepContent = (
+  getGSAPState: (id: string | undefined) => GSAPAnimationState,
+  startGSAPAnimation: (item: DrawingCommand | Annotation) => void,
+  stepDuration: number // Total step audio duration in seconds
+) => {
+  return (ctx: CanvasRenderingContext2D, step: WhiteboardStep, elapsedSeconds: number, idsToExclude?: Set<string>) => {
     if (!step.origin) return;
 
     const defaultColor = '#FFFFFF';
@@ -282,10 +287,33 @@ const createDrawStepContent = (getGSAPState: (id: string | undefined) => GSAPAni
     const totalItems = itemsToDraw.length;
     if (totalItems === 0) return;
 
-    const currentItemIndexFloat = animationProgress * totalItems;
-    const currentItemIndex = Math.floor(currentItemIndexFloat);
+    // Calculate default timing: All items draw sequentially in first 40% of step duration
+    const DEFAULT_DRAWING_WINDOW = stepDuration * 0.4;
+    const defaultItemDuration = DEFAULT_DRAWING_WINDOW / totalItems;
 
-    const drawItem = (item: DrawingCommand | Annotation, progress: number) => {
+    const drawItem = (item: DrawingCommand | Annotation, index: number) => {
+        // Determine timing for this item
+        const drawDelay = ('drawDelay' in item && item.drawDelay !== undefined)
+          ? item.drawDelay
+          : (index * defaultItemDuration); // Default: sequential
+
+        const drawDuration = ('drawDuration' in item && item.drawDuration !== undefined)
+          ? item.drawDuration
+          : defaultItemDuration; // Default: evenly split
+
+        // Calculate progress for this item based on elapsed time
+        const itemStartTime = drawDelay;
+        const itemEndTime = drawDelay + drawDuration;
+
+        let progress = 0;
+        if (elapsedSeconds >= itemEndTime) {
+          progress = 1; // Fully drawn
+        } else if (elapsedSeconds > itemStartTime) {
+          progress = (elapsedSeconds - itemStartTime) / drawDuration; // Currently drawing
+        } else {
+          return; // Not started yet
+        }
+
         let itemColor = item.color || defaultColor;
 
         // Expanded forbidden colors list - all black and very dark colors are prohibited
@@ -343,15 +371,10 @@ const createDrawStepContent = (getGSAPState: (id: string | undefined) => GSAPAni
         }
     };
 
-    for (let i = 0; i < currentItemIndex; i++) {
-        drawItem(itemsToDraw[i], 1);
-    }
-
-    if (currentItemIndex < totalItems) {
-        const item = itemsToDraw[currentItemIndex];
-        const itemProgress = currentItemIndexFloat - currentItemIndex;
-        drawItem(item, itemProgress);
-    }
+    // Draw all items (they will self-determine if they should render based on time)
+    itemsToDraw.forEach((item, index) => {
+      drawItem(item, index);
+    });
   };
 };
 
@@ -431,7 +454,8 @@ export const Canvas: React.FC<CanvasProps> = ({
   animationProgress,
   isPaused,
   explanation,
-  onFocusRequest
+  onFocusRequest,
+  stepDurations = []
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [viewTransform, setViewTransform] = useState({ x: 0, y: 0, zoom: 1 });
@@ -507,8 +531,9 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Create the drawStepContent function with access to GSAP state
   const drawStepContent = useMemo(() => {
-    return createDrawStepContent(getGSAPState, startGSAPAnimation);
-  }, [getGSAPState, startGSAPAnimation]);
+    const currentStepDuration = stepDurations[currentStepIndex] || 4; // Default 4s
+    return createDrawStepContent(getGSAPState, startGSAPAnimation, currentStepDuration);
+  }, [getGSAPState, startGSAPAnimation, currentStepIndex, stepDurations]);
 
   // Cleanup GSAP animations on unmount or when steps change
   useEffect(() => {
@@ -694,26 +719,36 @@ export const Canvas: React.FC<CanvasProps> = ({
       // When explanation is complete, render ALL steps at full progress
       for (let i = 0; i < resolvedSteps.length; i++) {
         const step = resolvedSteps[i];
+        const stepDur = stepDurations[i] || 4;
         if (step) {
-          drawStepContent(ctx, step, 1);
+          // Pass max elapsed time to show everything
+          const fullElapsed = stepDur * 2; // Well past all possible timings
+          const stepDrawFn = createDrawStepContent(getGSAPState, startGSAPAnimation, stepDur);
+          stepDrawFn(ctx, step, fullElapsed);
         }
       }
     } else {
       // During drawing, render previous steps + current animated step
       for (let i = 0; i < currentStepIndex; i++) {
         const step = resolvedSteps[i];
+        const stepDur = stepDurations[i] || 4;
         if (step) {
           // Only exclude items if this step shares the same origin as current step
           // This prevents re-drawing items during Conceptual Pivot but allows Addition steps to show fully
           const sharesOrigin = currentStep &&
             step.origin.x === currentStep.origin.x &&
             step.origin.y === currentStep.origin.y;
-          drawStepContent(ctx, step, 1, sharesOrigin ? currentStepItemIds : undefined);
+          const fullElapsed = stepDur * 2; // Well past all possible timings
+          const stepDrawFn = createDrawStepContent(getGSAPState, startGSAPAnimation, stepDur);
+          stepDrawFn(ctx, step, fullElapsed, sharesOrigin ? currentStepItemIds : undefined);
         }
       }
 
       if (currentStep) {
-        drawStepContent(ctx, currentStep, animationProgress);
+        // Convert animationProgress (0-1) to elapsed seconds
+        const currentStepDur = stepDurations[currentStepIndex] || 4;
+        const elapsedSeconds = animationProgress * currentStepDur;
+        drawStepContent(ctx, currentStep, elapsedSeconds);
       }
     }
     

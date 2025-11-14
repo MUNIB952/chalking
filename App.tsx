@@ -447,18 +447,15 @@ const App: React.FC = () => {
 
       console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s (actual audio duration), starting from ${(startProgress * 100).toFixed(1)}% progress`);
 
-      // PHASE 2: Speed up progressive drawing to 40% of audio duration
-      // This gives motion animations 60% of the time to play and be the star
-      const DRAWING_SPEED_MULTIPLIER = 0.4; // Drawing completes in 40% of audio time
-      const drawingDurationMs = durationMs * DRAWING_SPEED_MULTIPLIER;
-
+      // Animate progress from 0 to 1 over the FULL audio duration
+      // Individual items control their own timing via drawDelay/drawDuration
+      // Default: items draw in first 40% of step, leaving 60% for GSAP motion
       const stepStartTime = performance.now();
       const animate = () => {
         if (isCancelled) return;
 
         const elapsedMs = performance.now() - stepStartTime;
-        // Speed up drawing: complete in 40% of audio duration instead of 100%
-        const progressDelta = Math.min(elapsedMs / drawingDurationMs, remainingProgress);
+        const progressDelta = Math.min(elapsedMs / durationMs, remainingProgress);
         const currentProgress = Math.min(startProgress + progressDelta, 1);
 
         setAnimationProgress(currentProgress);
@@ -551,6 +548,7 @@ const App: React.FC = () => {
             isPaused={isPaused}
             key={canvasKey}
             explanation={explanation}
+            stepDurations={audioBuffersRef.current.map(b => b?.duration || 4)}
             onFocusRequest
         />
         <InteractionLayer status={status} />

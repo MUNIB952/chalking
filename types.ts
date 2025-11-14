@@ -52,6 +52,8 @@ export type ArrowAnnotation = {
   controlPoint?: Point; // Optional control point for curved arrows
   color?: string;
   id?: string;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
   animate?: AnimationConfig; // Optional GSAP animation
 };
 
@@ -63,6 +65,8 @@ export type TextAnnotation = {
   color?: string;
   id?: string;
   isContextual?: boolean; // If true, render this text with less emphasis as it's for context.
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
   animate?: AnimationConfig; // Optional GSAP animation
 };
 
@@ -72,6 +76,8 @@ export type StrikethroughAnnotation = {
   points: Point[]; // A path for the wavy line.
   color?: string;
   id?: string;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
   animate?: AnimationConfig; // Optional GSAP animation
 };
 
@@ -86,6 +92,8 @@ export type RectangleCommand = {
   color?: string;
   id?: string;
   isFilled?: boolean;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
   animate?: AnimationConfig; // Optional GSAP animation
 };
 
@@ -96,6 +104,8 @@ export type CircleCommand = {
   color?: string;
   id?: string;
   isFilled?: boolean;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
   animate?: AnimationConfig; // Optional GSAP animation
 };
 
@@ -104,6 +114,8 @@ export type PathCommand = {
   points: Point[];
   color?: string;
   id?: string;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
   animate?: AnimationConfig; // Optional GSAP animation
 };
 
