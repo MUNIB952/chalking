@@ -696,12 +696,6 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
   }, [steps]);
 
-  // Initialize physics for current step
-  useEffect(() => {
-    if (!currentStep) return;
-    initializePhysics(currentStepIndex, currentStep);
-  }, [currentStepIndex, currentStep, initializePhysics]);
-
   // Cleanup physics on unmount
   useEffect(() => {
     return () => {
@@ -819,7 +813,13 @@ export const Canvas: React.FC<CanvasProps> = ({
     }
     return map;
   }, [resolvedSteps]);
-  
+
+  // Initialize physics for current step
+  useEffect(() => {
+    if (!currentStep) return;
+    initializePhysics(currentStepIndex, currentStep);
+  }, [currentStepIndex, currentStep, initializePhysics]);
+
   const drawCanvas = useCallback((timestamp: number) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
