@@ -216,8 +216,32 @@ export const Composer: React.FC<ComposerProps> = ({
     <div
       className="absolute composer-mobile-position left-2 right-2 md:left-1/2 md:-translate-x-1/2 md:right-auto w-auto max-w-full md:max-w-4xl md:min-w-[700px] z-50"
     >
-      <div className="bg-[#101010] border border-[#1F51FF]/50 rounded-2xl p-1">
-
+      <div className={`rounded-2xl p-1 relative ${showStatusMessages ? 'shimmer-border' : 'bg-[#101010] border border-[#1F51FF]/50'}`}>
+        {showStatusMessages && (
+          <style>{`
+            @keyframes shimmer-animation {
+              0% {
+                background-position: -200% center;
+              }
+              100% {
+                background-position: 200% center;
+              }
+            }
+            .shimmer-border {
+              background: linear-gradient(90deg,
+                #1F51FF 0%,
+                #06b6d4 25%,
+                #8b5cf6 50%,
+                #06b6d4 75%,
+                #1F51FF 100%
+              );
+              background-size: 200% auto;
+              animation: shimmer-animation 3s linear infinite;
+              padding: 2px;
+            }
+          `}</style>
+        )}
+        <div className="bg-[#101010] rounded-[14px] p-1">
         {/* Row 1: Progress Bar / Step Name (LEFT) or Animated Prompts/Status (LEFT) + Control Buttons (RIGHT) */}
         <div className="flex items-center justify-between min-h-[3rem] md:h-12">
           <div className="flex-1 mr-1 md:mr-2 pl-1 min-w-0 overflow-hidden">
@@ -331,6 +355,7 @@ export const Composer: React.FC<ComposerProps> = ({
               </button>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </div>
