@@ -530,8 +530,6 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Helper: Create Matter.js soft body from JSON command
   const createSoftBody = useCallback((cmd: SoftBodyCommand, origin: AbsolutePoint) => {
-    const { Engine, World, Bodies, Composites, Composite, Constraint } = Matter;
-
     const centerX = (origin.x + (cmd.center as AbsolutePoint).x);
     const centerY = (origin.y + (cmd.center as AbsolutePoint).y);
 
@@ -556,7 +554,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     // Create soft body using Matter.js Composites
-    const softBody = Composites.stack(
+    const softBody = Matter.Composites.stack(
       centerX,
       centerY,
       cmd.columns,
@@ -564,15 +562,15 @@ export const Canvas: React.FC<CanvasProps> = ({
       cmd.columnGap,
       cmd.rowGap,
       (x: number, y: number) => {
-        return Bodies.circle(x, y, cmd.particleRadius, particleOptions);
+        return Matter.Bodies.circle(x, y, cmd.particleRadius, particleOptions);
       }
     );
 
     // Add constraints to connect particles
-    Composites.mesh(softBody, cmd.columns, cmd.rows, cmd.crossBrace, constraintOptions);
+    Matter.Composites.mesh(softBody, cmd.columns, cmd.rows, cmd.crossBrace, constraintOptions);
 
     // Pin edges if specified
-    const bodies = Composite.allBodies(softBody);
+    const bodies = Matter.Composite.allBodies(softBody);
     if (cmd.pinTop) {
       for (let i = 0; i < cmd.columns; i++) {
         bodies[i].isStatic = true;
@@ -600,8 +598,6 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Helper: Create Matter.js physics body from JSON command
   const createPhysicsBody = useCallback((cmd: PhysicsBodyCommand, origin: AbsolutePoint) => {
-    const { Bodies } = Matter;
-
     const centerX = origin.x + (cmd.center as AbsolutePoint).x;
     const centerY = origin.y + (cmd.center as AbsolutePoint).y;
 
@@ -618,24 +614,22 @@ export const Canvas: React.FC<CanvasProps> = ({
     };
 
     if (cmd.shape === 'circle') {
-      return Bodies.circle(centerX, centerY, cmd.radius || 30, options);
+      return Matter.Bodies.circle(centerX, centerY, cmd.radius || 30, options);
     } else {
-      return Bodies.rectangle(centerX, centerY, cmd.width || 60, cmd.height || 60, options);
+      return Matter.Bodies.rectangle(centerX, centerY, cmd.width || 60, cmd.height || 60, options);
     }
   }, []);
 
   // Helper: Initialize physics for current step
   const initializePhysics = useCallback((stepIndex: number, step: WhiteboardStep) => {
-    const { Engine, World, Runner } = Matter;
-
     // Clean up existing physics for this step
     const existingEngine = physicsEngines.current.get(stepIndex);
     if (existingEngine) {
       const existingRunner = physicsRunners.current.get(stepIndex);
       if (existingRunner) {
-        Runner.stop(existingRunner);
+        Matter.Runner.stop(existingRunner);
       }
-      Engine.clear(existingEngine);
+      Matter.Engine.clear(existingEngine);
     }
 
     // Check if step has physics bodies
@@ -646,7 +640,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (physicsItems.length === 0) return; // No physics needed
 
     // Create physics engine
-    const engine = Engine.create({
+    const engine = Matter.Engine.create({
       gravity: step.physicsConfig?.gravity || { x: 0, y: 1 },
       enableSleeping: step.physicsConfig?.enableSleeping ?? false,
       constraintIterations: step.physicsConfig?.constraintIterations ?? 2
@@ -662,7 +656,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         body = createPhysicsBody(item as PhysicsBodyCommand, step.origin);
       }
 
-      World.add(engine.world, body);
+      Matter.World.add(engine.world, body);
 
       if (item.id) {
         physicsBodiesMap.current.set(item.id, body);
@@ -670,8 +664,8 @@ export const Canvas: React.FC<CanvasProps> = ({
     });
 
     // Create runner
-    const runner = Runner.create();
-    Runner.run(runner, engine);
+    const runner = Matter.Runner.create();
+    Matter.Runner.run(runner, engine);
 
     // Store for cleanup
     physicsEngines.current.set(stepIndex, engine);
@@ -933,9 +927,8 @@ export const Canvas: React.FC<CanvasProps> = ({
       const engine = physicsEngines.current.get(stepIndex);
       if (!engine) return;
 
-      const { Composite } = Matter;
-      const allBodies = Composite.allBodies(engine.world);
-      const allConstraints = Composite.allConstraints(engine.world);
+      const allBodies = Matter.Composite.allBodies(engine.world);
+      const allConstraints = Matter.Composite.allConstraints(engine.world);
 
       // Render constraints (connections between particles)
       ctx.strokeStyle = '#06b6d4';
