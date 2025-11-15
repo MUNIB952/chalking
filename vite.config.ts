@@ -30,11 +30,11 @@ export default defineConfig(({ mode }) => {
         }
       },
       optimizeDeps: {
-        include: ['matter-js']
+        exclude: ['matter-js']
       },
       build: {
-        commonjsOptions: {
-          include: [/matter-js/, /node_modules/]
+        rollupOptions: {
+          external: ['matter-js']
         }
       }
     };

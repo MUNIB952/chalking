@@ -3,7 +3,7 @@ import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react'
 import { WhiteboardStep, Annotation, AppStatus, ArrowAnnotation, DrawingCommand, TextAnnotation, StrikethroughAnnotation, Point, AbsolutePoint, isRelativePoint, CircleCommand, SoftBodyCommand, PhysicsBodyCommand } from '../types';
 import { LoaderIcon, PauseIcon } from './icons';
 import gsap from 'gsap';
-import * as Matter from 'matter-js';
+import Matter from 'matter-js';
 
 interface CanvasProps {
   steps: WhiteboardStep[];
