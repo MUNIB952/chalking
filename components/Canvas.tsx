@@ -1,7 +1,8 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import { WhiteboardStep, Annotation, AppStatus, ArrowAnnotation, DrawingCommand, TextAnnotation, StrikethroughAnnotation, Point, AbsolutePoint, isRelativePoint, CircleCommand, SoftBodyCommand, PhysicsBodyCommand } from '../types';
-import { LoaderIcon, PauseIcon } from './icons';
+import { PauseIcon } from './icons';
+import { MorphingLoader } from './MorphingLoader';
 import gsap from 'gsap';
 // Matter.js loaded as global via CDN in index.html
 
@@ -1152,7 +1153,7 @@ export const Canvas: React.FC<CanvasProps> = ({
         />
         {showLoader && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/50 pointer-events-none">
-                <LoaderIcon className="w-12 h-12 text-cyan-400 animate-spin" />
+                <MorphingLoader />
             </div>
         )}
         {isPaused && status === 'DRAWING' && (
