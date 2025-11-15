@@ -447,12 +447,14 @@ const App: React.FC = () => {
 
       console.log(`Step ${currentStepIndex}: ${stepDuration.toFixed(2)}s (actual audio duration), starting from ${(startProgress * 100).toFixed(1)}% progress`);
 
+      // Animate progress from 0 to 1 over the FULL audio duration
+      // Individual items control their own timing via drawDelay/drawDuration
+      // Default: items draw in first 40% of step, leaving 60% for GSAP motion
       const stepStartTime = performance.now();
       const animate = () => {
         if (isCancelled) return;
 
         const elapsedMs = performance.now() - stepStartTime;
-        // Calculate progress from paused point
         const progressDelta = Math.min(elapsedMs / durationMs, remainingProgress);
         const currentProgress = Math.min(startProgress + progressDelta, 1);
 
@@ -546,6 +548,7 @@ const App: React.FC = () => {
             isPaused={isPaused}
             key={canvasKey}
             explanation={explanation}
+            stepDurations={audioBuffersRef.current.map(b => b?.duration || 4)}
             onFocusRequest
         />
         <InteractionLayer status={status} />

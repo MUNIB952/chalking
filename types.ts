@@ -1,6 +1,28 @@
 
 export type AppStatus = 'IDLE' | 'THINKING' | 'PREPARING' | 'DRAWING' | 'DONE' | 'ERROR';
 
+// Animation configuration for GSAP
+export type AnimationConfig = {
+  from?: {
+    x?: number;
+    y?: number;
+    scale?: number;
+    rotation?: number;
+    opacity?: number;
+  };
+  to?: {
+    x?: number;
+    y?: number;
+    scale?: number;
+    rotation?: number;
+    opacity?: number;
+  };
+  duration?: number; // in seconds
+  ease?: string; // GSAP easing function (e.g., "bounce.out", "elastic.inOut")
+  delay?: number; // delay before animation starts
+  repeat?: number; // -1 for infinite
+};
+
 export type AbsolutePoint = {
   x: number;
   y: number;
@@ -30,6 +52,9 @@ export type ArrowAnnotation = {
   controlPoint?: Point; // Optional control point for curved arrows
   color?: string;
   id?: string;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
+  animate?: AnimationConfig; // Optional GSAP animation
 };
 
 export type TextAnnotation = {
@@ -40,6 +65,9 @@ export type TextAnnotation = {
   color?: string;
   id?: string;
   isContextual?: boolean; // If true, render this text with less emphasis as it's for context.
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
+  animate?: AnimationConfig; // Optional GSAP animation
 };
 
 // NEW: A command to "cross out" a previously drawn element to show a correction.
@@ -48,6 +76,9 @@ export type StrikethroughAnnotation = {
   points: Point[]; // A path for the wavy line.
   color?: string;
   id?: string;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
+  animate?: AnimationConfig; // Optional GSAP animation
 };
 
 export type Annotation = ArrowAnnotation | TextAnnotation | StrikethroughAnnotation;
@@ -61,6 +92,9 @@ export type RectangleCommand = {
   color?: string;
   id?: string;
   isFilled?: boolean;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
+  animate?: AnimationConfig; // Optional GSAP animation
 };
 
 export type CircleCommand = {
@@ -70,6 +104,9 @@ export type CircleCommand = {
   color?: string;
   id?: string;
   isFilled?: boolean;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
+  animate?: AnimationConfig; // Optional GSAP animation
 };
 
 export type PathCommand = {
@@ -77,6 +114,9 @@ export type PathCommand = {
   points: Point[];
   color?: string;
   id?: string;
+  drawDelay?: number; // Delay before starting to draw this item (seconds from step start)
+  drawDuration?: number; // How long the drawing animation takes (seconds)
+  animate?: AnimationConfig; // Optional GSAP animation
 };
 
 export type DrawingCommand = RectangleCommand | CircleCommand | PathCommand;
