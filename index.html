@@ -21,8 +21,6 @@
     <meta name="twitter:title" content="Canvas - AI Explainer" />
     <meta name="twitter:description" content="An AI-powered visual explanation tool that creates voice-led whiteboard animations to explain concepts clearly and intuitively." />
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Matter.js Physics Engine -->
-    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=Caveat:wght@400..700&display=swap" rel="stylesheet">
@@ -129,6 +127,8 @@
 </head>
   <body>
     <div id="root"></div>
+    <!-- Matter.js MUST load before React app to be available as global -->
+    <script src="https://cdn.jsdelivr.net/npm/matter-js@0.20.0/build/matter.min.js"></script>
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
