@@ -1,8 +1,9 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
-import { WhiteboardStep, Annotation, AppStatus, ArrowAnnotation, DrawingCommand, TextAnnotation, StrikethroughAnnotation, Point, AbsolutePoint, isRelativePoint, CircleCommand } from '../types';
+import { WhiteboardStep, Annotation, AppStatus, ArrowAnnotation, DrawingCommand, TextAnnotation, StrikethroughAnnotation, Point, AbsolutePoint, isRelativePoint, CircleCommand, SoftBodyCommand, PhysicsBodyCommand } from '../types';
 import { LoaderIcon, PauseIcon } from './icons';
 import gsap from 'gsap';
+import Matter from 'matter-js';
 
 interface CanvasProps {
   steps: WhiteboardStep[];
@@ -466,6 +467,11 @@ export const Canvas: React.FC<CanvasProps> = ({
   const gsapTweens = useRef<Map<string, gsap.core.Tween>>(new Map());
   const completedItems = useRef<Set<string>>(new Set());
 
+  // Matter.js Physics Engine: Map of step index to physics world
+  const physicsEngines = useRef<Map<number, Matter.Engine>>(new Map());
+  const physicsRunners = useRef<Map<number, Matter.Runner>>(new Map());
+  const physicsBodiesMap = useRef<Map<string, Matter.Body | Matter.Composite>>(new Map());
+
   // Helper: Get GSAP animation state for an element (returns identity if no animation)
   const getGSAPState = useCallback((id: string | undefined): GSAPAnimationState => {
     if (!id || !gsapStates.current.has(id)) {
@@ -522,6 +528,156 @@ export const Canvas: React.FC<CanvasProps> = ({
     gsapTweens.current.set(item.id, tween);
   }, []);
 
+  // Helper: Create Matter.js soft body from JSON command
+  const createSoftBody = useCallback((cmd: SoftBodyCommand, origin: AbsolutePoint) => {
+    const { Engine, World, Bodies, Composites, Composite, Constraint } = Matter;
+
+    const centerX = (origin.x + (cmd.center as AbsolutePoint).x);
+    const centerY = (origin.y + (cmd.center as AbsolutePoint).y);
+
+    // Create particle grid
+    const particleOptions = {
+      friction: cmd.particleOptions?.friction ?? 0.05,
+      frictionStatic: cmd.particleOptions?.frictionStatic ?? 0.1,
+      mass: cmd.particleOptions?.mass ?? 1,
+      render: {
+        fillStyle: cmd.particleOptions?.render?.fillStyle ?? '#06b6d4',
+        strokeStyle: cmd.particleOptions?.render?.strokeStyle ?? '#06b6d4'
+      }
+    };
+
+    const constraintOptions = {
+      stiffness: cmd.constraintOptions?.stiffness ?? 0.9,
+      render: {
+        visible: cmd.constraintOptions?.render?.visible ?? true,
+        lineWidth: cmd.constraintOptions?.render?.lineWidth ?? 1,
+        strokeStyle: cmd.constraintOptions?.render?.strokeStyle ?? '#06b6d4'
+      }
+    };
+
+    // Create soft body using Matter.js Composites
+    const softBody = Composites.stack(
+      centerX,
+      centerY,
+      cmd.columns,
+      cmd.rows,
+      cmd.columnGap,
+      cmd.rowGap,
+      (x: number, y: number) => {
+        return Bodies.circle(x, y, cmd.particleRadius, particleOptions);
+      }
+    );
+
+    // Add constraints to connect particles
+    Composites.mesh(softBody, cmd.columns, cmd.rows, cmd.crossBrace, constraintOptions);
+
+    // Pin edges if specified
+    const bodies = Composite.allBodies(softBody);
+    if (cmd.pinTop) {
+      for (let i = 0; i < cmd.columns; i++) {
+        bodies[i].isStatic = true;
+      }
+    }
+    if (cmd.pinBottom) {
+      const startIdx = (cmd.rows - 1) * cmd.columns;
+      for (let i = startIdx; i < startIdx + cmd.columns; i++) {
+        bodies[i].isStatic = true;
+      }
+    }
+    if (cmd.pinLeft) {
+      for (let i = 0; i < cmd.rows; i++) {
+        bodies[i * cmd.columns].isStatic = true;
+      }
+    }
+    if (cmd.pinRight) {
+      for (let i = 0; i < cmd.rows; i++) {
+        bodies[(i + 1) * cmd.columns - 1].isStatic = true;
+      }
+    }
+
+    return softBody;
+  }, []);
+
+  // Helper: Create Matter.js physics body from JSON command
+  const createPhysicsBody = useCallback((cmd: PhysicsBodyCommand, origin: AbsolutePoint) => {
+    const { Bodies } = Matter;
+
+    const centerX = origin.x + (cmd.center as AbsolutePoint).x;
+    const centerY = origin.y + (cmd.center as AbsolutePoint).y;
+
+    const options = {
+      isStatic: cmd.options?.isStatic ?? false,
+      mass: cmd.options?.mass ?? 1,
+      friction: cmd.options?.friction ?? 0.1,
+      restitution: cmd.options?.restitution ?? 0.5,
+      density: cmd.options?.density ?? 0.001,
+      render: {
+        fillStyle: cmd.options?.render?.fillStyle ?? '#facc15',
+        strokeStyle: cmd.options?.render?.strokeStyle ?? '#facc15'
+      }
+    };
+
+    if (cmd.shape === 'circle') {
+      return Bodies.circle(centerX, centerY, cmd.radius || 30, options);
+    } else {
+      return Bodies.rectangle(centerX, centerY, cmd.width || 60, cmd.height || 60, options);
+    }
+  }, []);
+
+  // Helper: Initialize physics for current step
+  const initializePhysics = useCallback((stepIndex: number, step: WhiteboardStep) => {
+    const { Engine, World, Runner } = Matter;
+
+    // Clean up existing physics for this step
+    const existingEngine = physicsEngines.current.get(stepIndex);
+    if (existingEngine) {
+      const existingRunner = physicsRunners.current.get(stepIndex);
+      if (existingRunner) {
+        Runner.stop(existingRunner);
+      }
+      Engine.clear(existingEngine);
+    }
+
+    // Check if step has physics bodies
+    const physicsItems = (step.drawingPlan || []).filter(
+      item => item.type === 'softBody' || item.type === 'physicsBody'
+    );
+
+    if (physicsItems.length === 0) return; // No physics needed
+
+    // Create physics engine
+    const engine = Engine.create({
+      gravity: step.physicsConfig?.gravity || { x: 0, y: 1 },
+      enableSleeping: step.physicsConfig?.enableSleeping ?? false,
+      constraintIterations: step.physicsConfig?.constraintIterations ?? 2
+    });
+
+    // Create physics bodies
+    physicsItems.forEach(item => {
+      let body: Matter.Body | Matter.Composite;
+
+      if (item.type === 'softBody') {
+        body = createSoftBody(item as SoftBodyCommand, step.origin);
+      } else {
+        body = createPhysicsBody(item as PhysicsBodyCommand, step.origin);
+      }
+
+      World.add(engine.world, body);
+
+      if (item.id) {
+        physicsBodiesMap.current.set(item.id, body);
+      }
+    });
+
+    // Create runner
+    const runner = Runner.create();
+    Runner.run(runner, engine);
+
+    // Store for cleanup
+    physicsEngines.current.set(stepIndex, engine);
+    physicsRunners.current.set(stepIndex, runner);
+  }, [createSoftBody, createPhysicsBody]);
+
   // Expose setViewTransform for InteractionLayer
   useEffect(() => {
     (window as any).__setCanvasViewTransform = setViewTransform;
@@ -543,6 +699,27 @@ export const Canvas: React.FC<CanvasProps> = ({
       gsapTweens.current.clear();
       gsapStates.current.clear();
       completedItems.current.clear();
+    };
+  }, [steps]);
+
+  // Initialize physics for current step
+  useEffect(() => {
+    if (!currentStep) return;
+    initializePhysics(currentStepIndex, currentStep);
+  }, [currentStepIndex, currentStep, initializePhysics]);
+
+  // Cleanup physics on unmount
+  useEffect(() => {
+    return () => {
+      const { Runner, Engine } = Matter;
+      // Stop all runners
+      physicsRunners.current.forEach(runner => Runner.stop(runner));
+      // Clear all engines
+      physicsEngines.current.forEach(engine => Engine.clear(engine));
+      // Clear maps
+      physicsRunners.current.clear();
+      physicsEngines.current.clear();
+      physicsBodiesMap.current.clear();
     };
   }, [steps]);
 
@@ -751,7 +928,76 @@ export const Canvas: React.FC<CanvasProps> = ({
         drawStepContent(ctx, currentStep, elapsedSeconds);
       }
     }
-    
+
+    // Render Matter.js physics bodies
+    const renderPhysicsBodies = (stepIndex: number) => {
+      const engine = physicsEngines.current.get(stepIndex);
+      if (!engine) return;
+
+      const { Composite } = Matter;
+      const allBodies = Composite.allBodies(engine.world);
+      const allConstraints = Composite.allConstraints(engine.world);
+
+      // Render constraints (connections between particles)
+      ctx.strokeStyle = '#06b6d4';
+      ctx.lineWidth = 1;
+      allConstraints.forEach(constraint => {
+        if (!constraint.render?.visible) return;
+        if (!constraint.bodyA || !constraint.bodyB) return;
+
+        const pointA = constraint.bodyA.position;
+        const pointB = constraint.bodyB.position;
+
+        ctx.strokeStyle = constraint.render.strokeStyle || '#06b6d4';
+        ctx.lineWidth = constraint.render.lineWidth || 1;
+        ctx.beginPath();
+        ctx.moveTo(pointA.x, pointA.y);
+        ctx.lineTo(pointB.x, pointB.y);
+        ctx.stroke();
+      });
+
+      // Render bodies (particles)
+      allBodies.forEach(body => {
+        const { position, vertices, circleRadius } = body;
+
+        if (circleRadius) {
+          // Circle body
+          ctx.fillStyle = body.render?.fillStyle || '#06b6d4';
+          ctx.strokeStyle = body.render?.strokeStyle || '#06b6d4';
+          ctx.beginPath();
+          ctx.arc(position.x, position.y, circleRadius, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+        } else if (vertices) {
+          // Polygon body
+          ctx.fillStyle = body.render?.fillStyle || '#facc15';
+          ctx.strokeStyle = body.render?.strokeStyle || '#facc15';
+          ctx.beginPath();
+          ctx.moveTo(vertices[0].x, vertices[0].y);
+          for (let i = 1; i < vertices.length; i++) {
+            ctx.lineTo(vertices[i].x, vertices[i].y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      });
+    };
+
+    // Render physics for all visible steps
+    if (status === 'DONE') {
+      for (let i = 0; i < resolvedSteps.length; i++) {
+        renderPhysicsBodies(i);
+      }
+    } else {
+      // Render previous steps physics
+      for (let i = 0; i < currentStepIndex; i++) {
+        renderPhysicsBodies(i);
+      }
+      // Render current step physics
+      renderPhysicsBodies(currentStepIndex);
+    }
+
     if (status === 'DRAWING' && !isPaused && penTipPosition.current) {
         const penWorld = penTipPosition.current as AbsolutePoint;
 

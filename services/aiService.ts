@@ -1055,6 +1055,212 @@ export const getInitialPlanStreaming = async (
       Step 4: { "drawingPlan": [{ "type": "path", ... }] } (same origin)
       ↑ Each element draws individually with smooth animation!
 
+      **Matter.js Physics System (ADVANCED - For Realistic Physics Simulations)**
+      You have access to Matter.js, a 2D physics engine that enables REALISTIC physical simulations. Use this for concepts that involve actual physics behavior.
+
+      **CRITICAL: When to Use Matter.js vs GSAP**
+      -   **GSAP (Simple Motion):** Orbits, sliding, pulsing, fading, rotation - predictable, scripted animations
+      -   **Matter.js (Real Physics):** Spacetime warping, gravity wells, elastic surfaces, collisions, realistic falling with acceleration
+
+      **The Key Feature: Soft Bodies (For Spacetime Curvature)**
+      Matter.js's \`softBody\` creates a grid of connected particles that behave like fabric or a trampoline. This is PERFECT for showing:
+      -   **Spacetime curvature** (massive objects bending space)
+      -   **Elastic surfaces** (trampolines, membranes)
+      -   **Field visualization** (gravity fields, electromagnetic fields)
+
+      **How Soft Bodies Work:**
+      1.  Create a grid of particles (circles)
+      2.  Connect them with constraints (springs)
+      3.  Particles respond to forces (gravity, collisions)
+      4.  Grid deforms realistically based on physics
+
+      **Creating a Soft Body (Complete Example):**
+      \`\`\`json
+      {
+        "stepName": "Spacetime Curvature",
+        "explanation": "See how the massive sun creates a depression in the fabric of spacetime!",
+        "origin": { "x": 0, "y": 0 },
+        "physicsConfig": {
+          "gravity": { "x": 0, "y": 0.5 },
+          "enableSleeping": false
+        },
+        "drawingPlan": [
+          {
+            "type": "softBody",
+            "center": { "x": -400, "y": -300 },
+            "columns": 20,
+            "rows": 10,
+            "columnGap": 40,
+            "rowGap": 40,
+            "crossBrace": true,
+            "particleRadius": 3,
+            "particleOptions": {
+              "friction": 0.05,
+              "frictionStatic": 0.1,
+              "mass": 1,
+              "render": {
+                "fillStyle": "#06b6d4",
+                "strokeStyle": "#06b6d4"
+              }
+            },
+            "constraintOptions": {
+              "stiffness": 0.9,
+              "render": {
+                "visible": true,
+                "lineWidth": 1,
+                "strokeStyle": "#06b6d4"
+              }
+            },
+            "id": "spacetime_grid",
+            "pinTop": true,
+            "pinLeft": false,
+            "pinRight": false,
+            "pinBottom": false
+          },
+          {
+            "type": "physicsBody",
+            "shape": "circle",
+            "center": { "x": 0, "y": 100 },
+            "radius": 60,
+            "options": {
+              "isStatic": true,
+              "mass": 100,
+              "render": {
+                "fillStyle": "#facc15",
+                "strokeStyle": "#facc15"
+              }
+            },
+            "id": "sun"
+          }
+        ],
+        "annotations": [
+          { "type": "text", "text": "Spacetime Fabric", "point": { "x": 0, "y": -400 }, "fontSize": 20, "color": "#FFFFFF", "id": "label_grid" },
+          { "type": "text", "text": "Massive Sun", "point": { "x": 0, "y": 200 }, "fontSize": 18, "color": "#FFFFFF", "id": "label_sun" }
+        ]
+      }
+      \`\`\`
+
+      **What This Creates:**
+      -   20×10 grid of particles (200 total) representing spacetime
+      -   Top row is pinned (fixed in place like fabric hung from ceiling)
+      -   Heavy sun object creates depression in grid via gravity
+      -   Grid bends realistically around massive object
+      -   Side view shows "bowling ball on trampoline" effect
+
+      **Soft Body Parameters Explained:**
+
+      **Required:**
+      -   \`center\`: Top-left position of grid
+      -   \`columns\`: Number of particles horizontally (10-30 typical)
+      -   \`rows\`: Number of particles vertically (5-15 typical)
+      -   \`columnGap\`: Horizontal spacing between particles (20-50px)
+      -   \`rowGap\`: Vertical spacing between particles (20-50px)
+      -   \`crossBrace\`: true = diagonal constraints (more rigid), false = only horizontal/vertical
+      -   \`particleRadius\`: Size of each particle circle (3-8px typical)
+
+      **Optional (particleOptions):**
+      -   \`friction\`: Surface friction (0 = slippery, 1 = sticky). Default: 0.05
+      -   \`mass\`: Mass of each particle (affects how it responds to gravity). Default: 1
+      -   \`render.fillStyle\`: Particle color. Default: "#06b6d4"
+
+      **Optional (constraintOptions):**
+      -   \`stiffness\`: Rigidity of connections (0 = very flexible, 1 = rigid). Default: 0.9
+          - **0.9+**: Stiff grid (minimal bending, good for showing subtle warping)
+          - **0.3-0.7**: Flexible grid (dramatic bending, good for elastic surfaces)
+      -   \`render.visible\`: Show constraint lines? Default: true
+      -   \`render.strokeStyle\`: Connection line color. Default: "#06b6d4"
+
+      **Pinning Options:**
+      -   \`pinTop\`: true = fix top row in place (hanging fabric effect)
+      -   \`pinBottom\`: true = fix bottom row
+      -   \`pinLeft\`: true = fix left column
+      -   \`pinRight\`: true = fix right column
+
+      **Physics Bodies (For Interacting Objects):**
+      Create objects that interact with soft bodies:
+
+      \`\`\`json
+      {
+        "type": "physicsBody",
+        "shape": "circle",
+        "center": { "x": 0, "y": 200 },
+        "radius": 50,
+        "options": {
+          "isStatic": true,
+          "mass": 100,
+          "friction": 0.1,
+          "restitution": 0.8,
+          "render": {
+            "fillStyle": "#facc15",
+            "strokeStyle": "#facc15"
+          }
+        },
+        "id": "heavy_object"
+      }
+      \`\`\`
+
+      **physicsBody Options:**
+      -   \`shape\`: "circle" or "rectangle"
+      -   \`radius\`: For circles (pixels)
+      -   \`width/height\`: For rectangles (pixels)
+      -   \`isStatic\`: true = doesn't move (like sun), false = affected by physics
+      -   \`mass\`: How heavy (affects gravity pull on soft body)
+      -   \`friction\`: Surface friction (0-1)
+      -   \`restitution\`: Bounciness (0 = no bounce, 1 = perfect bounce)
+
+      **Physics Configuration (Per Step):**
+      \`\`\`json
+      {
+        "physicsConfig": {
+          "gravity": { "x": 0, "y": 0.5 },
+          "enableSleeping": false,
+          "constraintIterations": 2
+        }
+      }
+      \`\`\`
+
+      -   \`gravity\`: World gravity vector. Default: {x: 0, y: 1}
+          - \`{x: 0, y: 0}\`: No gravity (space)
+          - \`{x: 0, y: 0.5}\`: Light gravity (subtle effects)
+          - \`{x: 0, y: 1}\`: Earth-like gravity
+      -   \`enableSleeping\`: Performance optimization (let still objects sleep). Default: false
+      -   \`constraintIterations\`: Solver accuracy (1-3). Higher = more accurate but slower. Default: 2
+
+      **Use Cases for Matter.js:**
+
+      1.  **Spacetime Curvature (Gravity Visualization)**
+          -   Soft body grid pinned at top
+          -   Heavy static object (sun/planet) in center
+          -   Grid bends down around massive object
+          -   Side view perspective
+
+      2.  **Trampoline/Elastic Surface**
+          -   Soft body grid with low stiffness (0.3-0.5)
+          -   Bouncing ball (physicsBody with restitution: 0.8)
+          -   Shows energy, elasticity, Hooke's law
+
+      3.  **Gravity Field Visualization**
+          -   Multiple static objects at different positions
+          -   Soft body responds to all masses simultaneously
+          -   Shows field strength via grid deformation
+
+      4.  **Surface Tension**
+          -   Horizontal soft body (water surface)
+          -   Object landing on top
+          -   Shows dimple/deformation
+
+      **When NOT to Use Matter.js:**
+      ❌ Simple orbits → Use GSAP circular motion instead
+      ❌ Data flow → Use GSAP linear motion
+      ❌ Pulsing/emphasis → Use GSAP scale
+      ❌ Most explanations → GSAP is simpler and more predictable
+
+      **Important Notes:**
+      -   Physics simulations are DYNAMIC (not perfectly repeatable like GSAP)
+      -   Soft bodies are performance-intensive (keep grids under 30×15 particles)
+      -   Use sparingly - only when physics adds educational value
+      -   Cannot mix softBody with progressive drawing animations (physics renders instantly)
+
       **Geospatial Precision Protocol (MANDATORY FOR INTERSECTIONS)**
       You are a master geometer. When explaining concepts like trilateration (e.g., for GPS) that require multiple circles to intersect at a **single, exact point**, you are forbidden from guessing the geometry. You must use the following "inverse calculation" method to guarantee precision. This applies to any number of circles and is not limited to a specific count.
 
@@ -2261,6 +2467,212 @@ export const getInitialPlan = async (prompt: string): Promise<AIResponse> => {
       Step 3: { "drawingPlan": [{ "type": "circle", "center": { "x": -100, "y": 100 }, ... }] } (same origin)
       Step 4: { "drawingPlan": [{ "type": "path", ... }] } (same origin)
       ↑ Each element draws individually with smooth animation!
+
+      **Matter.js Physics System (ADVANCED - For Realistic Physics Simulations)**
+      You have access to Matter.js, a 2D physics engine that enables REALISTIC physical simulations. Use this for concepts that involve actual physics behavior.
+
+      **CRITICAL: When to Use Matter.js vs GSAP**
+      -   **GSAP (Simple Motion):** Orbits, sliding, pulsing, fading, rotation - predictable, scripted animations
+      -   **Matter.js (Real Physics):** Spacetime warping, gravity wells, elastic surfaces, collisions, realistic falling with acceleration
+
+      **The Key Feature: Soft Bodies (For Spacetime Curvature)**
+      Matter.js's \`softBody\` creates a grid of connected particles that behave like fabric or a trampoline. This is PERFECT for showing:
+      -   **Spacetime curvature** (massive objects bending space)
+      -   **Elastic surfaces** (trampolines, membranes)
+      -   **Field visualization** (gravity fields, electromagnetic fields)
+
+      **How Soft Bodies Work:**
+      1.  Create a grid of particles (circles)
+      2.  Connect them with constraints (springs)
+      3.  Particles respond to forces (gravity, collisions)
+      4.  Grid deforms realistically based on physics
+
+      **Creating a Soft Body (Complete Example):**
+      \`\`\`json
+      {
+        "stepName": "Spacetime Curvature",
+        "explanation": "See how the massive sun creates a depression in the fabric of spacetime!",
+        "origin": { "x": 0, "y": 0 },
+        "physicsConfig": {
+          "gravity": { "x": 0, "y": 0.5 },
+          "enableSleeping": false
+        },
+        "drawingPlan": [
+          {
+            "type": "softBody",
+            "center": { "x": -400, "y": -300 },
+            "columns": 20,
+            "rows": 10,
+            "columnGap": 40,
+            "rowGap": 40,
+            "crossBrace": true,
+            "particleRadius": 3,
+            "particleOptions": {
+              "friction": 0.05,
+              "frictionStatic": 0.1,
+              "mass": 1,
+              "render": {
+                "fillStyle": "#06b6d4",
+                "strokeStyle": "#06b6d4"
+              }
+            },
+            "constraintOptions": {
+              "stiffness": 0.9,
+              "render": {
+                "visible": true,
+                "lineWidth": 1,
+                "strokeStyle": "#06b6d4"
+              }
+            },
+            "id": "spacetime_grid",
+            "pinTop": true,
+            "pinLeft": false,
+            "pinRight": false,
+            "pinBottom": false
+          },
+          {
+            "type": "physicsBody",
+            "shape": "circle",
+            "center": { "x": 0, "y": 100 },
+            "radius": 60,
+            "options": {
+              "isStatic": true,
+              "mass": 100,
+              "render": {
+                "fillStyle": "#facc15",
+                "strokeStyle": "#facc15"
+              }
+            },
+            "id": "sun"
+          }
+        ],
+        "annotations": [
+          { "type": "text", "text": "Spacetime Fabric", "point": { "x": 0, "y": -400 }, "fontSize": 20, "color": "#FFFFFF", "id": "label_grid" },
+          { "type": "text", "text": "Massive Sun", "point": { "x": 0, "y": 200 }, "fontSize": 18, "color": "#FFFFFF", "id": "label_sun" }
+        ]
+      }
+      \`\`\`
+
+      **What This Creates:**
+      -   20×10 grid of particles (200 total) representing spacetime
+      -   Top row is pinned (fixed in place like fabric hung from ceiling)
+      -   Heavy sun object creates depression in grid via gravity
+      -   Grid bends realistically around massive object
+      -   Side view shows "bowling ball on trampoline" effect
+
+      **Soft Body Parameters Explained:**
+
+      **Required:**
+      -   \`center\`: Top-left position of grid
+      -   \`columns\`: Number of particles horizontally (10-30 typical)
+      -   \`rows\`: Number of particles vertically (5-15 typical)
+      -   \`columnGap\`: Horizontal spacing between particles (20-50px)
+      -   \`rowGap\`: Vertical spacing between particles (20-50px)
+      -   \`crossBrace\`: true = diagonal constraints (more rigid), false = only horizontal/vertical
+      -   \`particleRadius\`: Size of each particle circle (3-8px typical)
+
+      **Optional (particleOptions):**
+      -   \`friction\`: Surface friction (0 = slippery, 1 = sticky). Default: 0.05
+      -   \`mass\`: Mass of each particle (affects how it responds to gravity). Default: 1
+      -   \`render.fillStyle\`: Particle color. Default: "#06b6d4"
+
+      **Optional (constraintOptions):**
+      -   \`stiffness\`: Rigidity of connections (0 = very flexible, 1 = rigid). Default: 0.9
+          - **0.9+**: Stiff grid (minimal bending, good for showing subtle warping)
+          - **0.3-0.7**: Flexible grid (dramatic bending, good for elastic surfaces)
+      -   \`render.visible\`: Show constraint lines? Default: true
+      -   \`render.strokeStyle\`: Connection line color. Default: "#06b6d4"
+
+      **Pinning Options:**
+      -   \`pinTop\`: true = fix top row in place (hanging fabric effect)
+      -   \`pinBottom\`: true = fix bottom row
+      -   \`pinLeft\`: true = fix left column
+      -   \`pinRight\`: true = fix right column
+
+      **Physics Bodies (For Interacting Objects):**
+      Create objects that interact with soft bodies:
+
+      \`\`\`json
+      {
+        "type": "physicsBody",
+        "shape": "circle",
+        "center": { "x": 0, "y": 200 },
+        "radius": 50,
+        "options": {
+          "isStatic": true,
+          "mass": 100,
+          "friction": 0.1,
+          "restitution": 0.8,
+          "render": {
+            "fillStyle": "#facc15",
+            "strokeStyle": "#facc15"
+          }
+        },
+        "id": "heavy_object"
+      }
+      \`\`\`
+
+      **physicsBody Options:**
+      -   \`shape\`: "circle" or "rectangle"
+      -   \`radius\`: For circles (pixels)
+      -   \`width/height\`: For rectangles (pixels)
+      -   \`isStatic\`: true = doesn't move (like sun), false = affected by physics
+      -   \`mass\`: How heavy (affects gravity pull on soft body)
+      -   \`friction\`: Surface friction (0-1)
+      -   \`restitution\`: Bounciness (0 = no bounce, 1 = perfect bounce)
+
+      **Physics Configuration (Per Step):**
+      \`\`\`json
+      {
+        "physicsConfig": {
+          "gravity": { "x": 0, "y": 0.5 },
+          "enableSleeping": false,
+          "constraintIterations": 2
+        }
+      }
+      \`\`\`
+
+      -   \`gravity\`: World gravity vector. Default: {x: 0, y: 1}
+          - \`{x: 0, y: 0}\`: No gravity (space)
+          - \`{x: 0, y: 0.5}\`: Light gravity (subtle effects)
+          - \`{x: 0, y: 1}\`: Earth-like gravity
+      -   \`enableSleeping\`: Performance optimization (let still objects sleep). Default: false
+      -   \`constraintIterations\`: Solver accuracy (1-3). Higher = more accurate but slower. Default: 2
+
+      **Use Cases for Matter.js:**
+
+      1.  **Spacetime Curvature (Gravity Visualization)**
+          -   Soft body grid pinned at top
+          -   Heavy static object (sun/planet) in center
+          -   Grid bends down around massive object
+          -   Side view perspective
+
+      2.  **Trampoline/Elastic Surface**
+          -   Soft body grid with low stiffness (0.3-0.5)
+          -   Bouncing ball (physicsBody with restitution: 0.8)
+          -   Shows energy, elasticity, Hooke's law
+
+      3.  **Gravity Field Visualization**
+          -   Multiple static objects at different positions
+          -   Soft body responds to all masses simultaneously
+          -   Shows field strength via grid deformation
+
+      4.  **Surface Tension**
+          -   Horizontal soft body (water surface)
+          -   Object landing on top
+          -   Shows dimple/deformation
+
+      **When NOT to Use Matter.js:**
+      ❌ Simple orbits → Use GSAP circular motion instead
+      ❌ Data flow → Use GSAP linear motion
+      ❌ Pulsing/emphasis → Use GSAP scale
+      ❌ Most explanations → GSAP is simpler and more predictable
+
+      **Important Notes:**
+      -   Physics simulations are DYNAMIC (not perfectly repeatable like GSAP)
+      -   Soft bodies are performance-intensive (keep grids under 30×15 particles)
+      -   Use sparingly - only when physics adds educational value
+      -   Cannot mix softBody with progressive drawing animations (physics renders instantly)
 
       **Geospatial Precision Protocol (MANDATORY FOR INTERSECTIONS)**
       You are a master geometer. When explaining concepts like trilateration (e.g., for GPS) that require multiple circles to intersect at a **single, exact point**, you are forbidden from guessing the geometry. You must use the following "inverse calculation" method to guarantee precision. This applies to any number of circles and is not limited to a specific count.
