@@ -711,11 +711,10 @@ export const Canvas: React.FC<CanvasProps> = ({
   // Cleanup physics on unmount
   useEffect(() => {
     return () => {
-      const { Runner, Engine } = Matter;
       // Stop all runners
-      physicsRunners.current.forEach(runner => Runner.stop(runner));
+      physicsRunners.current.forEach(runner => Matter.Runner.stop(runner));
       // Clear all engines
-      physicsEngines.current.forEach(engine => Engine.clear(engine));
+      physicsEngines.current.forEach(engine => Matter.Engine.clear(engine));
       // Clear maps
       physicsRunners.current.clear();
       physicsEngines.current.clear();
