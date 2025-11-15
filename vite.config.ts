@@ -28,14 +28,6 @@ export default defineConfig(({ mode }) => {
         alias: {
           '@': path.resolve(__dirname, '.'),
         }
-      },
-      optimizeDeps: {
-        exclude: ['matter-js']
-      },
-      build: {
-        rollupOptions: {
-          external: ['matter-js']
-        }
       }
     };
 });
